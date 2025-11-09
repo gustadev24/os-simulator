@@ -1,4 +1,4 @@
-# Virtual Memory Management
+# OS Simulator
 
 ## Descripción
 
@@ -9,6 +9,9 @@ todo
 ### Requisitos
 
 - CMake
+- Python 3.12+
+- Doxygen (para documentación)
+- LaTeX (para documentación en PDF)
 - Compilador C++ (GCC, Clang, etc.)
 - Just (opcional, para comandos)
 
@@ -18,7 +21,7 @@ Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurad
 ### Comandos utiles
 
 #### Compilación
-La primera build puede tardar un poco más ya que se descargan y construyen las dependencias.
+**La primera build puede tardar un poco más ya que se descargan y construyen las dependencias.**
 
 Usando CMake:
 
@@ -62,4 +65,43 @@ Usando Just:
 
 ```bash
 just test
+```
+
+#### Generar documentación
+Usando Doxygen:
+
+```bash
+doxygen
+```
+
+Usando Just:
+
+```bash
+just build-docs
+```
+
+#### Servir documentación localmente
+Usando python http.server:
+
+```bash
+cd docs/html && python3 -m http.server 8000
+```
+
+Usando Just:
+
+```bash
+just build-docs-serve
+```
+
+#### Convertir documentación a PDF
+Usando latex:
+
+```bash
+cd docs/latex && make
+```
+
+Usando Just:
+
+```bash
+just build-docs-pdf
 ```

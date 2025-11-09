@@ -23,6 +23,18 @@
             gcc
             cmake
             just
+            doxygen
+            texlive.combined.scheme-full
+            graphviz
+            (python312.withPackages(ps: with ps; [
+              matplotlib
+              numpy
+              jsonschema
+              pandas
+              seaborn
+              plotutils
+              click
+            ]))
           ];
           buildInputs = [ pkgs.bashInteractive ];
           shellHook = '''';
