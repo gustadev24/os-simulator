@@ -1,27 +1,27 @@
-# OS Simulator
+# Simulador Integrado de Planificación de Procesos y Gestión de Memoria Virtual
 
 ## Descripción
 
-todo
+El simulador desarrollado integra módulos de planificación de procesos y gestión de memoria virtual, manteniendo control en la interacción de ambos mediante el uso de políticas establecidas con el objetivo de lograr un rendimiento óptimo del sistema.
 
 ## Desarrollo
 
 ### Requisitos
 
-- CMake
-- Python 3.12+
 - Compilador C++ (GCC, Clang, etc.)
-- Just (opcional, para comandos)
+- [Python 3.12+](https://www.python.org/downloads/) (para visualización)
+- [CMake](https://cmake.org/download/) (para automatización de compilación)
+- [Just](https://github.com/casey/just) (opcional, para automatización de comandos)
 
 ### Documentación
 *Doxygen recientemente tuvo un problema con cambios hechos en el kernel de LaTeX, por lo que cualquier versión <1.15 va a fallar con versiones de LaTeX del año 2025*
-- Doxygen 1.15+ (para documentación)
-- LaTeX (para documentación en PDF)
+- [Doxygen 1.15+](https://www.doxygen.nl/index.html) (para documentación)
+- [LaTeX](https://www.latex-project.org/get/) (para documentación en PDF)
 
 ### Servidor de lenguaje
 Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurado para este proyecto.
 
-### Comandos utiles
+### Comandos útiles
 
 #### Compilación
 **La primera build puede tardar un poco más ya que se descargan y construyen las dependencias.**

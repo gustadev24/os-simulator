@@ -20,9 +20,9 @@ add_executable(os_simulator ${SOURCES})
 target_compile_definitions(os_simulator PRIVATE PROJECT_NAME="${PROJECT_NAME}")
 
 if (MSVC)
-    target_compile_options(os_simulator PRIVATE /W4 /permissive-)
+  target_compile_options(os_simulator PRIVATE /W4 /permissive-)
 else()
-    target_compile_options(os_simulator PRIVATE -Wall -Wextra -pedantic)
+  target_compile_options(os_simulator PRIVATE -Wall -Wextra -pedantic)
 endif()
 
 # todo remove if unused
@@ -39,25 +39,31 @@ add_custom_command(
 
 option(BUILD_TESTS "Build test executables" ON)
 if(BUILD_TESTS)
-    Include(FetchContent)
+  Include(FetchContent)
 
-    FetchContent_Declare(
+  FetchContent_Declare(
       Catch2
       GIT_REPOSITORY https://github.com/catchorg/Catch2.git
       GIT_TAG        v3.8.1 # or a later release
     )
-    
-    FetchContent_MakeAvailable(Catch2)
 
-    file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS
+  FetchContent_MakeAvailable(Catch2)
+
+  file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/tests/*.cpp
     )
-    add_executable(tests ${TEST_SOURCES})
-    target_compile_definitions(tests PRIVATE PROJECT_NAME="${PROJECT_NAME}")
-    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
-    if (MSVC)
-        target_compile_options(tests PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(tests PRIVATE -Wall -Wextra -pedantic)
-    endif()
+  file(GLOB_RECURSE IMPL_SOURCES CONFIGURE_DEPENDS
+        ${PROJECT_SOURCE_DIR}/src/core/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/cpu/*.cpp
+    )
+  list(REMOVE_ITEM IMPL_SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp)
+  add_executable(tests ${TEST_SOURCES} ${IMPL_SOURCES})
+  target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/include)
+  target_compile_definitions(tests PRIVATE PROJECT_NAME="${PROJECT_NAME}")
+  target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+  if (MSVC)
+    target_compile_options(tests PRIVATE /W4 /permissive-)
+  else()
+    target_compile_options(tests PRIVATE -Wall -Wextra -pedantic)
+  endif()
 endif()
