@@ -8,18 +8,12 @@ El simulador desarrollado integra módulos de planificación de procesos y gesti
 
 ### Requisitos
 
-- CMake
+- [CMake](https://cmake.org/download/) (para automatización de compilación)
 - Compilador C++ (GCC, Clang, etc.)
-- Just (opcional, para comandos)
+- [Just](https://github.com/casey/just) (opcional, para automatización de comandos)
 
 ### Servidor de lenguaje
 Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurado para este proyecto.
-
-### Recomendaciones para el desarrollo
-
-Se usan las siguentes herramientas para el desarrollo del proyecto, se recomienda instalarlas antes de empezar a desarrollar.
-* [cmake](https://cmake.org/download/): Para automatización de compilación
-* [just](https://github.com/casey/just): Para automatización de scripts
 
 ### Comandos útiles
 
