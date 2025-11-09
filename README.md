@@ -10,10 +10,13 @@ todo
 
 - CMake
 - Python 3.12+
-- Doxygen (para documentación)
-- LaTeX (para documentación en PDF)
 - Compilador C++ (GCC, Clang, etc.)
 - Just (opcional, para comandos)
+
+### Documentación
+*Doxygen recientemente tuvo un problema con cambios hechos en el kernel de LaTeX, por lo que cualquier versión <1.15 va a fallar con versiones de LaTeX del año 2025*
+- Doxygen 1.15+ (para documentación)
+- LaTeX (para documentación en PDF)
 
 ### Servidor de lenguaje
 Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurado para este proyecto.

@@ -14,8 +14,8 @@ clean:
 build-docs:
   doxygen
 
-build-docs-serve: build-docs
+docs-serve: build-docs
   pushd docs/html && python3 -m http.server 8000 && popd
 
-build-docs-pdf: build-docs
+docs-pdf: build-docs
   pushd docs/latex && make && popd
