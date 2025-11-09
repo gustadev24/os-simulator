@@ -1,8 +1,8 @@
-# Virtual Memory Management
+# Simulador Integrado de Planificación de Procesos y Gestión de Memoria Virtual
 
 ## Descripción
 
-todo
+El simulador desarrollado integra módulos de planificación de procesos y gestión de memoria virtual, manteniendo control en la interacción de ambos mediante el uso de políticas establecidas con el objetivo de lograr un rendimiento óptimo del sistema.
 
 ## Desarrollo
 
@@ -15,7 +15,13 @@ todo
 ### Servidor de lenguaje
 Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurado para este proyecto.
 
-### Comandos utiles
+### Recomendaciones para el desarrollo
+
+Se usan las siguentes herramientas para el desarrollo del proyecto, se recomienda instalarlas antes de empezar a desarrollar.
+* [cmake](https://cmake.org/download/): Para automatización de compilación
+* [just](https://github.com/casey/just): Para automatización de scripts
+
+### Comandos útiles
 
 #### Compilación
 La primera build puede tardar un poco más ya que se descargan y construyen las dependencias.
