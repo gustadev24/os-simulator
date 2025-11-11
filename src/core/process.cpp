@@ -1,4 +1,5 @@
 #include "core/process.hpp"
+#include <iostream>
 
 namespace OSSimulator {
 
@@ -18,6 +19,52 @@ Process::Process(int p, const std::string &n, int arrival, int burst, int prio,
       state(ProcessState::NEW), first_execution(true), last_execution_time(0),
       memory_required(mem), memory_base(0), memory_allocated(false),
       process_thread(nullptr), should_terminate(false), step_complete(false) {}
+
+// Copy constructor - copies all data but NOT the thread (thread is per-instance)
+Process::Process(const Process &other)
+    : pid(other.pid), name(other.name), arrival_time(other.arrival_time),
+      burst_time(other.burst_time), remaining_time(other.remaining_time),
+      completion_time(other.completion_time), waiting_time(other.waiting_time),
+      turnaround_time(other.turnaround_time), response_time(other.response_time),
+      start_time(other.start_time), priority(other.priority),
+      state(other.state.load()), // Load the atomic value
+      first_execution(other.first_execution),
+      last_execution_time(other.last_execution_time),
+      memory_required(other.memory_required), memory_base(other.memory_base),
+      memory_allocated(other.memory_allocated),
+      process_thread(nullptr), // Don't copy the thread
+      should_terminate(other.should_terminate.load()),
+      step_complete(other.step_complete.load()) {}
+
+// Copy assignment operator
+Process &Process::operator=(const Process &other) {
+  if (this != &other) {
+    // Stop any existing thread before copying
+    stop_thread();
+
+    pid = other.pid;
+    name = other.name;
+    arrival_time = other.arrival_time;
+    burst_time = other.burst_time;
+    remaining_time = other.remaining_time;
+    completion_time = other.completion_time;
+    waiting_time = other.waiting_time;
+    turnaround_time = other.turnaround_time;
+    response_time = other.response_time;
+    start_time = other.start_time;
+    priority = other.priority;
+    state.store(other.state.load()); // Copy atomic value using load/store
+    first_execution = other.first_execution;
+    last_execution_time = other.last_execution_time;
+    memory_required = other.memory_required;
+    memory_base = other.memory_base;
+    memory_allocated = other.memory_allocated;
+    should_terminate.store(other.should_terminate.load());
+    step_complete.store(other.step_complete.load());
+    // process_thread remains nullptr (don't copy threads)
+  }
+  return *this;
+}
 
 void Process::calculate_metrics() {
   turnaround_time = completion_time - arrival_time;
@@ -109,34 +156,33 @@ bool Process::is_thread_running() const {
 }
 
 void Process::thread_function() {
-  while (!should_terminate) {
+  while (!should_terminate.load()) {
+    std::unique_lock<std::mutex> lock(process_mutex);
+    
     // Wait until state is RUNNING or should terminate
-    {
-      std::unique_lock<std::mutex> lock(process_mutex);
-      state_cv.wait(lock, [this]() {
-        return state == ProcessState::RUNNING || should_terminate;
-      });
-
-      // Exit if termination requested
-      if (should_terminate) {
-        break;
-      }
+    state_cv.wait(lock, [this]() {
+      return state.load() == ProcessState::RUNNING || should_terminate.load();
+    });
+    
+    // Exit if termination requested
+    if (should_terminate.load()) {
+      break;
     }
 
     // Simulate execution of one quantum
     // In a real simulation, this would be more sophisticated
     // For now, we just signal that we're ready to execute
     // The actual execution (remaining_time decrement) happens in execute()
-
+    
     // Signal that this step is complete
-    {
-      std::lock_guard<std::mutex> lock(process_mutex);
-      step_complete = true;
-      state_cv.notify_all();
-    }
-
-    // Small sleep to simulate work (optional, helps with debugging)
-    // std::this_thread::sleep_for(std::chrono::microseconds(100));
+    step_complete.store(true);
+    state_cv.notify_all();
+    
+    // NOW wait until the scheduler changes our state back to NOT RUNNING
+    // This prevents us from looping and executing multiple times
+    state_cv.wait(lock, [this]() {
+      return state.load() != ProcessState::RUNNING || should_terminate.load();
+    });
   }
 }
 

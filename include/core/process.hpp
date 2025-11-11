@@ -43,6 +43,10 @@ struct Process {
   Process(int p, const std::string &n, int arrival, int burst, int prio = 0,
           uint32_t mem = 0);
 
+  // Copy constructor and assignment operator (needed because of atomic members)
+  Process(const Process &other);
+  Process &operator=(const Process &other);
+
   void calculate_metrics();
   bool has_arrived(int current_time) const;
   bool is_completed() const;
