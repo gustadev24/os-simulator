@@ -11,7 +11,7 @@ class Scheduler {
 public:
   virtual ~Scheduler() = default;
 
-  virtual void add_process(const Process &process) = 0;
+  virtual void add_process(Process *process) = 0;
   virtual Process *get_next_process() = 0;
   virtual bool has_processes() const = 0;
   virtual void remove_process(int pid) = 0;

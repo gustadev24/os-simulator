@@ -8,13 +8,13 @@ namespace OSSimulator {
 
 class RoundRobinScheduler : public Scheduler {
 private:
-  std::deque<Process> ready_queue;
+  std::deque<Process*> ready_queue;
   int quantum;
 
 public:
   explicit RoundRobinScheduler(int q = 4);
 
-  void add_process(const Process &process) override;
+  void add_process(Process *process) override;
   Process *get_next_process() override;
   bool has_processes() const override;
   void remove_process(int pid) override;
