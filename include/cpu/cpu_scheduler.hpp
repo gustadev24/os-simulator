@@ -3,8 +3,10 @@
 
 #include "core/process.hpp"
 #include "cpu/scheduler.hpp"
+#include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace OSSimulator {
@@ -21,8 +23,19 @@ private:
   using MemoryCheckCallback = std::function<bool(const Process &)>;
   MemoryCheckCallback memory_check_callback;
 
+  // Threading components
+  std::mutex scheduler_mutex;
+  std::atomic<bool> simulation_running;
+
+  // Threading helper methods
+  void spawn_process_thread(Process &proc);
+  void notify_process_running(Process *proc);
+  void wait_for_process_step(Process *proc);
+  void terminate_all_threads();
+
 public:
   CPUScheduler();
+  ~CPUScheduler();
 
   void set_scheduler(std::unique_ptr<Scheduler> sched);
   void set_memory_callback(MemoryCheckCallback callback);
