@@ -1,8 +1,13 @@
 #ifndef PROCESS_HPP
 #define PROCESS_HPP
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 
 namespace OSSimulator {
 
@@ -20,12 +25,19 @@ struct Process {
   int response_time;
   int start_time;
   int priority;
-  ProcessState state;
+  std::atomic<ProcessState> state;
   bool first_execution;
   int last_execution_time;
   uint32_t memory_required;
   uint32_t memory_base;
   bool memory_allocated;
+
+  // Threading components
+  std::unique_ptr<std::thread> process_thread;
+  mutable std::mutex process_mutex;
+  mutable std::condition_variable state_cv;
+  std::atomic<bool> should_terminate;
+  std::atomic<bool> step_complete;
 
   Process();
   Process(int p, const std::string &n, int arrival, int burst, int prio = 0,
@@ -36,6 +48,14 @@ struct Process {
   bool is_completed() const;
   int execute(int quantum, int current_time);
   void reset();
+
+  // Threading methods
+  void start_thread();
+  void stop_thread();
+  bool is_thread_running() const;
+
+private:
+  void thread_function();
 };
 
 } // namespace OSSimulator
