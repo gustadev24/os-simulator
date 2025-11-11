@@ -1,11 +1,13 @@
 #include "core/process.hpp"
 #include "cpu/round_robin_scheduler.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
 
 using namespace OSSimulator;
 
 TEST_CASE("Round Robin Scheduler - Basic Operations", "[round_robin]") {
   RoundRobinScheduler scheduler(4);
+  std::vector<Process> processes;
 
   SECTION("Empty scheduler") {
     REQUIRE_FALSE(scheduler.has_processes());
@@ -14,8 +16,8 @@ TEST_CASE("Round Robin Scheduler - Basic Operations", "[round_robin]") {
   }
 
   SECTION("Add single process") {
-    Process p1(1, "P1", 0, 10);
-    scheduler.add_process(p1);
+    processes.emplace_back(1, "P1", 0, 10);
+    scheduler.add_process(&processes[0]);
 
     REQUIRE(scheduler.has_processes());
     REQUIRE(scheduler.size() == 1);
@@ -37,27 +39,29 @@ TEST_CASE("Round Robin Scheduler - Basic Operations", "[round_robin]") {
 
 TEST_CASE("Round Robin Scheduler - Queue Rotation", "[round_robin]") {
   RoundRobinScheduler scheduler(4);
+  std::vector<Process> processes;
 
   SECTION("FIFO order before rotation") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
-    Process p3(3, "P3", 0, 8);
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
+    processes.emplace_back(3, "P3", 0, 8);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
+    scheduler.add_process(&processes[2]);
 
     REQUIRE(scheduler.get_next_process()->pid == 1);
   }
 
   SECTION("Rotation moves front to back") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
-    Process p3(3, "P3", 0, 8);
+    processes.clear();
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
+    processes.emplace_back(3, "P3", 0, 8);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
+    scheduler.add_process(&processes[2]);
 
     REQUIRE(scheduler.get_next_process()->pid == 1);
     scheduler.rotate();
@@ -69,11 +73,12 @@ TEST_CASE("Round Robin Scheduler - Queue Rotation", "[round_robin]") {
   }
 
   SECTION("Multiple rotations") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
+    processes.clear();
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
 
     for (int i = 0; i < 5; ++i) {
       scheduler.rotate();
@@ -85,15 +90,16 @@ TEST_CASE("Round Robin Scheduler - Queue Rotation", "[round_robin]") {
 
 TEST_CASE("Round Robin Scheduler - Remove Operations", "[round_robin]") {
   RoundRobinScheduler scheduler(4);
+  std::vector<Process> processes;
 
   SECTION("Remove from queue") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
-    Process p3(3, "P3", 0, 8);
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
+    processes.emplace_back(3, "P3", 0, 8);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
+    scheduler.add_process(&processes[2]);
 
     scheduler.remove_process(2);
     REQUIRE(scheduler.size() == 2);
@@ -101,13 +107,14 @@ TEST_CASE("Round Robin Scheduler - Remove Operations", "[round_robin]") {
   }
 
   SECTION("Remove and rotate") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
-    Process p3(3, "P3", 0, 8);
+    processes.clear();
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
+    processes.emplace_back(3, "P3", 0, 8);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
+    scheduler.add_process(&processes[2]);
 
     scheduler.rotate();
     scheduler.remove_process(1);
@@ -117,11 +124,12 @@ TEST_CASE("Round Robin Scheduler - Remove Operations", "[round_robin]") {
   }
 
   SECTION("Clear scheduler") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 5);
+    processes.clear();
+    processes.emplace_back(1, "P1", 0, 10);
+    processes.emplace_back(2, "P2", 0, 5);
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
+    scheduler.add_process(&processes[0]);
+    scheduler.add_process(&processes[1]);
 
     scheduler.clear();
     REQUIRE(scheduler.size() == 0);
