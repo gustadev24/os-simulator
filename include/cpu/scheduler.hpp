@@ -2,6 +2,7 @@
 #define SCHEDULER_HPP
 
 #include "core/process.hpp"
+#include <memory>
 
 namespace OSSimulator {
 
@@ -11,8 +12,8 @@ class Scheduler {
 public:
   virtual ~Scheduler() = default;
 
-  virtual void add_process(Process *process) = 0;
-  virtual Process *get_next_process() = 0;
+  virtual void add_process(std::shared_ptr<Process> process) = 0;
+  virtual std::shared_ptr<Process> get_next_process() = 0;
   virtual bool has_processes() const = 0;
   virtual void remove_process(int pid) = 0;
   virtual size_t size() const = 0;
@@ -20,6 +21,6 @@ public:
   virtual SchedulingAlgorithm get_algorithm() const = 0;
 };
 
-} // namespace OSSimulator
+}
 
 #endif // SCHEDULER_HPP

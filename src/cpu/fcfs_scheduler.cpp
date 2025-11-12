@@ -2,11 +2,11 @@
 
 namespace OSSimulator {
 
-void FCFSScheduler::add_process(Process *process) {
+void FCFSScheduler::add_process(std::shared_ptr<Process> process) {
   ready_queue.push_back(process);
 }
 
-Process *FCFSScheduler::get_next_process() {
+std::shared_ptr<Process> FCFSScheduler::get_next_process() {
   if (ready_queue.empty()) {
     return nullptr;
   }

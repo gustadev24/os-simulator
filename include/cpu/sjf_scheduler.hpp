@@ -8,11 +8,11 @@ namespace OSSimulator {
 
 class SJFScheduler : public Scheduler {
 private:
-  std::vector<Process*> ready_queue;
+  std::vector<std::shared_ptr<Process>> ready_queue;
 
 public:
-  void add_process(Process *process) override;
-  Process *get_next_process() override;
+  void add_process(std::shared_ptr<Process> process) override;
+  std::shared_ptr<Process> get_next_process() override;
   bool has_processes() const override;
   void remove_process(int pid) override;
   size_t size() const override;
