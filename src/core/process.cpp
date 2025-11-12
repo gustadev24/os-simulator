@@ -125,7 +125,7 @@ void Process::reset() {
 
 void Process::start_thread() {
   stop_thread();
-
+  std::cout << "[PROCESS " << pid << "] Starting thread... should_terminate = " << should_terminate.load() << "\n";
   should_terminate = false;
   step_complete = false;
 
@@ -188,7 +188,7 @@ void Process::thread_function() {
       return state.load() != ProcessState::RUNNING || should_terminate.load();
     });
 
-    std::cout << "[NOTIFICADO] [THREAD " << pid << "] Estado cambiado a " 
+    std::cout << "[NOTIFICADO] [THREAD " << pid << "] Estado cambiado a "
               << static_cast<int>(state.load()) << ".\n";
   }
 

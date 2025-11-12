@@ -9,7 +9,9 @@ namespace OSSimulator {
 CPUScheduler::CPUScheduler()
     : scheduler(nullptr), current_time(0), running_process(nullptr),
       context_switches(0), memory_check_callback(nullptr),
-      simulation_running(false) {}
+      simulation_running(false) {
+        all_processes.reserve(100);
+      }
 
 CPUScheduler::~CPUScheduler() {
   terminate_all_threads();
@@ -107,6 +109,7 @@ void CPUScheduler::execute_step(int quantum) {
 }
 
 void CPUScheduler::run_until_completion() {
+  std::cout << "[SCHEDULER] Iniciando simulación...\n";
   simulation_running = true;
   while (simulation_running && (has_pending_processes() || scheduler->has_processes())) {
     int quantum = 0;
@@ -175,6 +178,7 @@ void CPUScheduler::spawn_process_thread(Process &proc) {
 }
 
 void CPUScheduler::notify_process_running(Process *proc) {
+  std::cout << "ENTRA A NOTIFICAR";
   if (!proc) return;
   std::lock_guard<std::mutex> lock(proc->process_mutex);
 

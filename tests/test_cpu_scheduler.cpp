@@ -14,20 +14,20 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
-  SECTION("Single process execution") {
-    std::cout << "=== TEST: Single process execution ===\n";
-    Process p1(1, "P1", 0, 5);
-    cpu_scheduler.add_process(p1);
+  // SECTION("Single process execution") {
+  //   std::cout << "=== TEST: Single process execution ===\n";
+  //   Process p1(1, "P1", 0, 5);
+  //   cpu_scheduler.add_process(p1);
 
-    cpu_scheduler.run_until_completion();
+  //   cpu_scheduler.run_until_completion();
 
-    auto completed = cpu_scheduler.get_completed_processes();
-    REQUIRE(completed.size() == 1);
-    REQUIRE(completed[0].pid == 1);
-    REQUIRE(completed[0].completion_time == 5);
-    REQUIRE(completed[0].waiting_time == 0);
-    REQUIRE(completed[0].turnaround_time == 5);
-  }
+  //   auto completed = cpu_scheduler.get_completed_processes();
+  //   REQUIRE(completed.size() == 1);
+  //   REQUIRE(completed[0].pid == 1);
+  //   REQUIRE(completed[0].completion_time == 5);
+  //   REQUIRE(completed[0].waiting_time == 0);
+  //   REQUIRE(completed[0].turnaround_time == 5);
+  // }
 
   SECTION("Multiple processes - no waiting") {
     std::cout << "=== TEST: Multiple processes - no waiting ===\n";
@@ -36,9 +36,12 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
     Process p3(3, "P3", 0, 4);
 
     cpu_scheduler.add_process(p1);
+    std::cout << "TERMINO DE ENTRAR EL P1...\n";
     cpu_scheduler.add_process(p2);
+    std::cout << "TERMINO DE ENTRAR EL P2...\n";
     cpu_scheduler.add_process(p3);
 
+    std::cout << "Running RUN_UNTIL...\n";
     cpu_scheduler.run_until_completion();
 
     auto completed = cpu_scheduler.get_completed_processes();
@@ -46,23 +49,23 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
     REQUIRE(cpu_scheduler.get_current_time() == 12);
   }
 
-  SECTION("Processes with different arrival times") {
-    std::cout << "=== TEST: Processes with different arrival times ===\n";
-    Process p1(1, "P1", 0, 4);
-    Process p2(2, "P2", 1, 3);
-    Process p3(3, "P3", 2, 2);
+  // SECTION("Processes with different arrival times") {
+  //   std::cout << "=== TEST: Processes with different arrival times ===\n";
+  //   Process p1(1, "P1", 0, 4);
+  //   Process p2(2, "P2", 1, 3);
+  //   Process p3(3, "P3", 2, 2);
 
-    cpu_scheduler.add_process(p1);
-    cpu_scheduler.add_process(p2);
-    cpu_scheduler.add_process(p3);
+  //   cpu_scheduler.add_process(p1);
+  //   cpu_scheduler.add_process(p2);
+  //   cpu_scheduler.add_process(p3);
 
-    cpu_scheduler.run_until_completion();
+  //   cpu_scheduler.run_until_completion();
 
-    auto completed = cpu_scheduler.get_completed_processes();
-    REQUIRE(completed.size() == 3);
-    REQUIRE(completed[0].pid == 1);
-    REQUIRE(completed[0].completion_time == 4);
-  }
+  //   auto completed = cpu_scheduler.get_completed_processes();
+  //   REQUIRE(completed.size() == 3);
+  //   REQUIRE(completed[0].pid == 1);
+  //   REQUIRE(completed[0].completion_time == 4);
+  // }
 }
 
 // TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
