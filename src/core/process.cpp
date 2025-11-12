@@ -87,13 +87,20 @@ int Process::execute(int quantum, int current_time) {
     first_execution = false;
   }
 
-  int time_executed = (quantum < remaining_time) ? quantum : remaining_time;
-  remaining_time -= time_executed;
-  last_execution_time = current_time + time_executed;
+  int time_executed = (quantum > 0) ? std::min(quantum, remaining_time) : remaining_time;
+  {
+    std::lock_guard<std::mutex> lock(process_mutex);
+    remaining_time -= time_executed;
+    last_execution_time = current_time + time_executed;
+  }
 
   if (is_completed()) {
     completion_time = current_time + time_executed;
-    state = ProcessState::TERMINATED;
+    {
+      std::lock_guard<std::mutex> lock(process_mutex);
+      state = ProcessState::TERMINATED;
+      state_cv.notify_all();
+    }
   }
 
   return time_executed;
@@ -116,18 +123,12 @@ void Process::reset() {
   memory_base = 0;
 }
 
-// Threading implementations
 void Process::start_thread() {
-  // Don't start if already running
-  if (process_thread && process_thread->joinable()) {
-    return;
-  }
+  stop_thread();
 
-  // Initialize threading flags
   should_terminate = false;
   step_complete = false;
 
-  // Create the process thread
   process_thread = std::make_unique<std::thread>(&Process::thread_function, this);
 }
 
@@ -136,14 +137,12 @@ void Process::stop_thread() {
     return;
   }
 
-  // Signal thread to terminate
   {
     std::lock_guard<std::mutex> lock(process_mutex);
     should_terminate = true;
     state_cv.notify_all();
   }
 
-  // Wait for thread to finish
   if (process_thread->joinable()) {
     process_thread->join();
   }
@@ -152,38 +151,53 @@ void Process::stop_thread() {
 }
 
 bool Process::is_thread_running() const {
-  return process_thread && process_thread->joinable();
+  return process_thread && process_thread->joinable() && !should_terminate;
 }
 
 void Process::thread_function() {
+  std::cout << "[THREAD " << pid << "] Iniciado.\n";
+  std::cout << "[THREAD " << pid << "] should_terminate = " << should_terminate.load() << ".\n";
+
   while (!should_terminate.load()) {
+    std::cout << "[THREAD " << pid << "] Esperando notificación del scheduler...ENTRA AL WHILE\n";
     std::unique_lock<std::mutex> lock(process_mutex);
-    
-    // Wait until state is RUNNING or should terminate
+
+    // Esperar a que el scheduler diga "RUNNING"
     state_cv.wait(lock, [this]() {
       return state.load() == ProcessState::RUNNING || should_terminate.load();
     });
-    
-    // Exit if termination requested
-    if (should_terminate.load()) {
-      break;
-    }
 
-    // Simulate execution of one quantum
-    // In a real simulation, this would be more sophisticated
-    // For now, we just signal that we're ready to execute
-    // The actual execution (remaining_time decrement) happens in execute()
-    
-    // Signal that this step is complete
+    if (should_terminate.load()) break;
+
+    std::cout << "[NOTIFICADO] [THREAD " << pid << "] Ejecutando paso...\n";
+
+    // Simular una unidad de tiempo de CPU
+    std::this_thread::sleep_for(std::chrono::milliseconds(60));
+
+    // Marcar que se completó este paso
     step_complete.store(true);
+    std::cout << "[THREAD " << pid << "] Paso completado.\n";
+
+    // Notificar al scheduler que este paso terminó
+    std::cout << "[THREAD " << pid << "] Notificando al scheduler que el paso terminó.\n";
     state_cv.notify_all();
-    
-    // NOW wait until the scheduler changes our state back to NOT RUNNING
-    // This prevents us from looping and executing multiple times
+
+    // Esperar a que el scheduler cambie el estado a algo distinto de RUNNING
+    std::cout << "[THREAD " << pid << "] Esperando a que el scheduler cambie el estado a algo distinto de RUNNING.\n";
     state_cv.wait(lock, [this]() {
       return state.load() != ProcessState::RUNNING || should_terminate.load();
     });
+
+    std::cout << "[NOTIFICADO] [THREAD " << pid << "] Estado cambiado a " 
+              << static_cast<int>(state.load()) << ".\n";
   }
+
+  std::cout << "[THREAD " << pid << "] Terminando hilo.\n";
+}
+
+
+Process::~Process() {
+  stop_thread();
 }
 
 } // namespace OSSimulator

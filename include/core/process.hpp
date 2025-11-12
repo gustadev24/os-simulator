@@ -53,6 +53,8 @@ struct Process {
   int execute(int quantum, int current_time);
   void reset();
 
+  ~Process();
+
   // Threading methods
   void start_thread();
   void stop_thread();
