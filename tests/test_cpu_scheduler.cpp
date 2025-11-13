@@ -6,6 +6,7 @@
 #include "cpu/sjf_scheduler.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <iostream>
 
 using namespace OSSimulator;
 
@@ -14,23 +15,23 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
   SECTION("Single process execution") {
-    Process p1(1, "P1", 0, 5);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     cpu_scheduler.add_process(p1);
 
     cpu_scheduler.run_until_completion();
 
     auto completed = cpu_scheduler.get_completed_processes();
     REQUIRE(completed.size() == 1);
-    REQUIRE(completed[0].pid == 1);
-    REQUIRE(completed[0].completion_time == 5);
-    REQUIRE(completed[0].waiting_time == 0);
-    REQUIRE(completed[0].turnaround_time == 5);
+    REQUIRE(completed[0]->pid == 1);
+    REQUIRE(completed[0]->completion_time == 5);
+    REQUIRE(completed[0]->waiting_time == 0);
+    REQUIRE(completed[0]->turnaround_time == 5);
   }
 
   SECTION("Multiple processes - no waiting") {
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
-    Process p3(3, "P3", 0, 4);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 4);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -44,9 +45,10 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   }
 
   SECTION("Processes with different arrival times") {
-    Process p1(1, "P1", 0, 4);
-    Process p2(2, "P2", 1, 3);
-    Process p3(3, "P3", 2, 2);
+    std::cout << "=== TEST: Processes with different arrival times ===\n";
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 4);
+    auto p2 = std::make_shared<Process>(2, "P2", 1, 3);
+    auto p3 = std::make_shared<Process>(3, "P3", 2, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -56,8 +58,8 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
 
     auto completed = cpu_scheduler.get_completed_processes();
     REQUIRE(completed.size() == 3);
-    REQUIRE(completed[0].pid == 1);
-    REQUIRE(completed[0].completion_time == 4);
+    REQUIRE(completed[0]->pid == 1);
+    REQUIRE(completed[0]->completion_time == 4);
   }
 }
 
@@ -66,9 +68,9 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
   cpu_scheduler.set_scheduler(std::make_unique<SJFScheduler>());
 
   SECTION("Shortest job first order") {
-    Process p1(1, "P1", 0, 8);
-    Process p2(2, "P2", 0, 4);
-    Process p3(3, "P3", 0, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 8);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 4);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -78,15 +80,15 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
 
     auto completed = cpu_scheduler.get_completed_processes();
     REQUIRE(completed.size() == 3);
-    REQUIRE(completed[0].pid == 3);
-    REQUIRE(completed[1].pid == 2);
-    REQUIRE(completed[2].pid == 1);
+    REQUIRE(completed[0]->pid == 3);
+    REQUIRE(completed[1]->pid == 2);
+    REQUIRE(completed[2]->pid == 1);
   }
 
   SECTION("Calculate metrics correctly") {
-    Process p1(1, "P1", 0, 6);
-    Process p2(2, "P2", 0, 2);
-    Process p3(3, "P3", 0, 8);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 6);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 2);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 8);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -95,13 +97,13 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
     cpu_scheduler.run_until_completion();
 
     auto completed = cpu_scheduler.get_completed_processes();
-    REQUIRE(completed[0].pid == 2);
-    REQUIRE(completed[0].waiting_time == 0);
-    REQUIRE(completed[0].turnaround_time == 2);
+    REQUIRE(completed[0]->pid == 2);
+    REQUIRE(completed[0]->waiting_time == 0);
+    REQUIRE(completed[0]->turnaround_time == 2);
 
-    REQUIRE(completed[1].pid == 1);
-    REQUIRE(completed[1].waiting_time == 2);
-    REQUIRE(completed[1].turnaround_time == 8);
+    REQUIRE(completed[1]->pid == 1);
+    REQUIRE(completed[1]->waiting_time == 2);
+    REQUIRE(completed[1]->turnaround_time == 8);
   }
 }
 
@@ -112,8 +114,8 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
   cpu_scheduler.set_scheduler(std::move(rr));
 
   SECTION("Simple round robin with quantum 2") {
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -126,9 +128,9 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
   }
 
   SECTION("Context switches occur") {
-    Process p1(1, "P1", 0, 6);
-    Process p2(2, "P2", 0, 4);
-    Process p3(3, "P3", 0, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 6);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 4);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -144,8 +146,8 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
     auto rr2 = std::make_unique<RoundRobinScheduler>(4);
     cpu_scheduler2.set_scheduler(std::move(rr2));
 
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 0, 10);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 10);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 10);
 
     cpu_scheduler2.add_process(p1);
     cpu_scheduler2.add_process(p2);
@@ -163,9 +165,9 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
   cpu_scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
 
   SECTION("Higher priority executes first") {
-    Process p1(1, "P1", 0, 5, 3);
-    Process p2(2, "P2", 0, 3, 1);
-    Process p3(3, "P3", 0, 4, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5, 3);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3, 1);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 4, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -175,15 +177,15 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
 
     auto completed = cpu_scheduler.get_completed_processes();
     REQUIRE(completed.size() == 3);
-    REQUIRE(completed[0].pid == 2);
-    REQUIRE(completed[1].pid == 3);
-    REQUIRE(completed[2].pid == 1);
+    REQUIRE(completed[0]->pid == 2);
+    REQUIRE(completed[1]->pid == 3);
+    REQUIRE(completed[2]->pid == 1);
   }
 
   SECTION("Same priority - FCFS") {
-    Process p1(1, "P1", 0, 5, 2);
-    Process p2(2, "P2", 1, 3, 2);
-    Process p3(3, "P3", 2, 4, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5, 2);
+    auto p2 = std::make_shared<Process>(2, "P2", 1, 3, 2);
+    auto p3 = std::make_shared<Process>(3, "P3", 2, 4, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -193,9 +195,9 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
 
     auto completed = cpu_scheduler.get_completed_processes();
     REQUIRE(completed.size() == 3);
-    REQUIRE(completed[0].pid == 1);
-    REQUIRE(completed[1].pid == 2);
-    REQUIRE(completed[2].pid == 3);
+    REQUIRE(completed[0]->pid == 1);
+    REQUIRE(completed[1]->pid == 2);
+    REQUIRE(completed[2]->pid == 3);
   }
 }
 
@@ -204,9 +206,9 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
   SECTION("Average waiting time") {
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
-    Process p3(3, "P3", 0, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
+    auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -219,8 +221,8 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   }
 
   SECTION("Average turnaround time") {
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -232,8 +234,8 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   }
 
   SECTION("Average response time") {
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -250,13 +252,13 @@ TEST_CASE("CPU Scheduler - Process States", "[cpu_scheduler][states]") {
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
   SECTION("Process transitions through states") {
-    Process p1(1, "P1", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 3);
     cpu_scheduler.add_process(p1);
 
     cpu_scheduler.run_until_completion();
 
     auto completed = cpu_scheduler.get_completed_processes();
-    REQUIRE(completed[0].state == ProcessState::TERMINATED);
+    REQUIRE(completed[0]->state == ProcessState::TERMINATED);
   }
 }
 
@@ -264,8 +266,8 @@ TEST_CASE("CPU Scheduler - Reset Functionality", "[cpu_scheduler][reset]") {
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
-  Process p1(1, "P1", 0, 5);
-  Process p2(2, "P2", 0, 3);
+  auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+  auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
   cpu_scheduler.add_process(p1);
   cpu_scheduler.add_process(p2);
@@ -286,9 +288,9 @@ TEST_CASE("CPU Scheduler - Arrival Time Handling", "[cpu_scheduler][arrival]") {
   cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
   SECTION("Late arriving processes") {
-    Process p1(1, "P1", 0, 2);
-    Process p2(2, "P2", 5, 3);
-    Process p3(3, "P3", 10, 2);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 2);
+    auto p2 = std::make_shared<Process>(2, "P2", 5, 3);
+    auto p3 = std::make_shared<Process>(3, "P3", 10, 2);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -308,8 +310,8 @@ TEST_CASE("CPU Scheduler - Context Switch Counting",
     CPUScheduler cpu_scheduler;
     cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
-    Process p1(1, "P1", 0, 5);
-    Process p2(2, "P2", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -324,8 +326,8 @@ TEST_CASE("CPU Scheduler - Context Switch Counting",
     auto rr = std::make_unique<RoundRobinScheduler>(1);
     cpu_scheduler.set_scheduler(std::move(rr));
 
-    Process p1(1, "P1", 0, 3);
-    Process p2(2, "P2", 0, 3);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 3);
+    auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
     cpu_scheduler.add_process(p1);
     cpu_scheduler.add_process(p2);
@@ -348,7 +350,7 @@ TEST_CASE("CPU Scheduler - Memory Callback", "[cpu_scheduler][memory]") {
       return true;
     });
 
-    Process p1(1, "P1", 0, 5);
+    auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     cpu_scheduler.add_process(p1);
 
     cpu_scheduler.run_until_completion();
