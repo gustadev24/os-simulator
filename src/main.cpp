@@ -28,12 +28,12 @@ void print_results(CPUScheduler &scheduler) {
   std::cout << std::string(80, '-') << "\n";
 
   for (const auto &proc : completed) {
-    std::cout << std::left << std::setw(6) << proc.pid << std::setw(12)
-              << proc.name << std::setw(10) << proc.arrival_time
-              << std::setw(10) << proc.burst_time << std::setw(12)
-              << proc.completion_time << std::setw(10) << proc.waiting_time
-              << std::setw(12) << proc.turnaround_time << std::setw(10)
-              << proc.response_time << "\n";
+    std::cout << std::left << std::setw(6) << proc->pid << std::setw(12)
+              << proc->name << std::setw(10) << proc->arrival_time
+              << std::setw(10) << proc->burst_time << std::setw(12)
+              << proc->completion_time << std::setw(10) << proc->waiting_time
+              << std::setw(12) << proc->turnaround_time << std::setw(10)
+              << proc->response_time << "\n";
   }
 
   std::cout << "\n";
@@ -55,9 +55,11 @@ void demo_fcfs() {
   CPUScheduler scheduler;
   scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
-  std::vector<Process> processes = {
-      Process(1, "P1", 0, 8), Process(2, "P2", 1, 4), Process(3, "P3", 2, 9),
-      Process(4, "P4", 3, 5)};
+  std::vector<std::shared_ptr<Process>> processes = {
+      std::make_shared<Process>(1, "P1", 0, 8),
+      std::make_shared<Process>(2, "P2", 1, 4),
+      std::make_shared<Process>(3, "P3", 2, 9),
+      std::make_shared<Process>(4, "P4", 3, 5)};
 
   scheduler.load_processes(processes);
   scheduler.run_until_completion();
@@ -71,9 +73,11 @@ void demo_sjf() {
   CPUScheduler scheduler;
   scheduler.set_scheduler(std::make_unique<SJFScheduler>());
 
-  std::vector<Process> processes = {
-      Process(1, "P1", 0, 8), Process(2, "P2", 1, 4), Process(3, "P3", 2, 2),
-      Process(4, "P4", 3, 1)};
+  std::vector<std::shared_ptr<Process>> processes = {
+      std::make_shared<Process>(1, "P1", 0, 8),
+      std::make_shared<Process>(2, "P2", 1, 4),
+      std::make_shared<Process>(3, "P3", 2, 2),
+      std::make_shared<Process>(4, "P4", 3, 1)};
 
   scheduler.load_processes(processes);
   scheduler.run_until_completion();
@@ -88,9 +92,11 @@ void demo_round_robin() {
   auto rr_scheduler = std::make_unique<RoundRobinScheduler>(4);
   scheduler.set_scheduler(std::move(rr_scheduler));
 
-  std::vector<Process> processes = {
-      Process(1, "P1", 0, 10), Process(2, "P2", 1, 8), Process(3, "P3", 2, 6),
-      Process(4, "P4", 3, 4)};
+  std::vector<std::shared_ptr<Process>> processes = {
+      std::make_shared<Process>(1, "P1", 0, 10),
+      std::make_shared<Process>(2, "P2", 1, 8),
+      std::make_shared<Process>(3, "P3", 2, 6),
+      std::make_shared<Process>(4, "P4", 3, 4)};
 
   scheduler.load_processes(processes);
   scheduler.run_until_completion();
@@ -104,9 +110,11 @@ void demo_priority() {
   CPUScheduler scheduler;
   scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
 
-  std::vector<Process> processes = {
-      Process(1, "P1", 0, 8, 3), Process(2, "P2", 1, 4, 1),
-      Process(3, "P3", 2, 9, 4), Process(4, "P4", 3, 5, 2)};
+  std::vector<std::shared_ptr<Process>> processes = {
+      std::make_shared<Process>(1, "P1", 0, 8, 3),
+      std::make_shared<Process>(2, "P2", 1, 4, 1),
+      std::make_shared<Process>(3, "P3", 2, 9, 4),
+      std::make_shared<Process>(4, "P4", 3, 5, 2)};
 
   scheduler.load_processes(processes);
   scheduler.run_until_completion();

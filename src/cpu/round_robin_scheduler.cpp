@@ -4,22 +4,22 @@ namespace OSSimulator {
 
 RoundRobinScheduler::RoundRobinScheduler(int q) : quantum(q) {}
 
-void RoundRobinScheduler::add_process(const Process &process) {
+void RoundRobinScheduler::add_process(std::shared_ptr<Process> process) {
   ready_queue.push_back(process);
 }
 
-Process *RoundRobinScheduler::get_next_process() {
+std::shared_ptr<Process> RoundRobinScheduler::get_next_process() {
   if (ready_queue.empty()) {
     return nullptr;
   }
-  return &ready_queue.front();
+  return ready_queue.front();
 }
 
 bool RoundRobinScheduler::has_processes() const { return !ready_queue.empty(); }
 
 void RoundRobinScheduler::remove_process(int pid) {
   for (auto it = ready_queue.begin(); it != ready_queue.end(); ++it) {
-    if (it->pid == pid) {
+    if ((*it)->pid == pid) {
       ready_queue.erase(it);
       return;
     }

@@ -1,11 +1,13 @@
 #include "core/process.hpp"
 #include "cpu/fcfs_scheduler.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
 
 using namespace OSSimulator;
 
 TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   FCFSScheduler scheduler;
+  std::vector<std::shared_ptr<Process>> processes; // Store processes to keep them alive
 
   SECTION("Empty scheduler") {
     REQUIRE_FALSE(scheduler.has_processes());
@@ -14,8 +16,8 @@ TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   }
 
   SECTION("Add single process") {
-    Process p1(1, "P1", 0, 10);
-    scheduler.add_process(p1);
+    processes.push_back(std::make_shared<Process>(1, "P1", 0, 10));
+    scheduler.add_process(processes[0]);
 
     REQUIRE(scheduler.has_processes());
     REQUIRE(scheduler.size() == 1);
@@ -24,26 +26,26 @@ TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   }
 
   SECTION("Add multiple processes") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 1, 5);
-    Process p3(3, "P3", 2, 8);
+    processes.push_back(std::make_shared<Process>(1, "P1", 0, 10));
+    processes.push_back(std::make_shared<Process>(2, "P2", 1, 5));
+    processes.push_back(std::make_shared<Process>(3, "P3", 2, 8));
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(processes[0]);
+    scheduler.add_process(processes[1]);
+    scheduler.add_process(processes[2]);
 
     REQUIRE(scheduler.size() == 3);
     REQUIRE(scheduler.get_next_process()->pid == 1);
   }
 
   SECTION("FCFS order - first come first served") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 1, 5);
-    Process p3(3, "P3", 2, 8);
+    processes.push_back(std::make_shared<Process>(1, "P1", 0, 10));
+    processes.push_back(std::make_shared<Process>(2, "P2", 1, 5));
+    processes.push_back(std::make_shared<Process>(3, "P3", 2, 8));
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(processes[0]);
+    scheduler.add_process(processes[1]);
+    scheduler.add_process(processes[2]);
 
     REQUIRE(scheduler.get_next_process()->pid == 1);
     scheduler.remove_process(1);
@@ -55,11 +57,11 @@ TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   }
 
   SECTION("Remove process") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 1, 5);
+    processes.push_back(std::make_shared<Process>(1, "P1", 0, 10));
+    processes.push_back(std::make_shared<Process>(2, "P2", 1, 5));
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
+    scheduler.add_process(processes[0]);
+    scheduler.add_process(processes[1]);
 
     scheduler.remove_process(1);
     REQUIRE(scheduler.size() == 1);
@@ -67,11 +69,11 @@ TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   }
 
   SECTION("Clear scheduler") {
-    Process p1(1, "P1", 0, 10);
-    Process p2(2, "P2", 1, 5);
+    processes.push_back(std::make_shared<Process>(1, "P1", 0, 10));
+    processes.push_back(std::make_shared<Process>(2, "P2", 1, 5));
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
+    scheduler.add_process(processes[0]);
+    scheduler.add_process(processes[1]);
 
     scheduler.clear();
     REQUIRE(scheduler.size() == 0);
@@ -85,15 +87,16 @@ TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
 
 TEST_CASE("FCFS Scheduler - Arrival Order", "[fcfs]") {
   FCFSScheduler scheduler;
+  std::vector<std::shared_ptr<Process>> processes;
 
   SECTION("Different arrival times") {
-    Process p1(1, "P1", 5, 10);
-    Process p2(2, "P2", 0, 5);
-    Process p3(3, "P3", 3, 8);
+    processes.push_back(std::make_shared<Process>(1, "P1", 5, 10));
+    processes.push_back(std::make_shared<Process>(2, "P2", 0, 5));
+    processes.push_back(std::make_shared<Process>(3, "P3", 3, 8));
 
-    scheduler.add_process(p1);
-    scheduler.add_process(p2);
-    scheduler.add_process(p3);
+    scheduler.add_process(processes[0]);
+    scheduler.add_process(processes[1]);
+    scheduler.add_process(processes[2]);
 
     REQUIRE(scheduler.get_next_process()->pid == 1);
     scheduler.remove_process(1);
