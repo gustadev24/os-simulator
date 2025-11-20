@@ -8,5 +8,9 @@ test: build
 run: build
   ./build/bin/os_simulator
 
+demo-io:
+  g++ -std=c++17 -o build/bin/demo_io examples/demo_io.cpp src/core/process.cpp src/io/io_device.cpp src/io/io_manager.cpp -I./include -pthread
+  ./build/bin/demo_io
+
 clean: 
   rm -rf build

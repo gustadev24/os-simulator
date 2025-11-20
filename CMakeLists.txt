@@ -55,6 +55,7 @@ if(BUILD_TESTS)
   file(GLOB_RECURSE IMPL_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/src/core/*.cpp
         ${PROJECT_SOURCE_DIR}/src/cpu/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/io/*.cpp
     )
   list(REMOVE_ITEM IMPL_SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp)
   add_executable(tests ${TEST_SOURCES} ${IMPL_SOURCES})
