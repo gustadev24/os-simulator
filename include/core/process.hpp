@@ -1,6 +1,7 @@
 #ifndef PROCESS_HPP
 #define PROCESS_HPP
 
+#include "core/burst.hpp"
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -8,6 +9,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace OSSimulator {
 
@@ -48,6 +50,20 @@ struct Process {
   uint32_t memory_base;     //!< Dirección base de la memoria asignada.
   bool memory_allocated;    //!< Indica si la memoria ha sido asignada.
 
+<<<<<<< HEAD
+  // Burst sequence for CPU and I/O
+  std::vector<Burst> burst_sequence;
+  size_t current_burst_index;
+  int total_cpu_time;
+  int total_io_time;
+
+  // Threading components
+  std::unique_ptr<std::thread> process_thread;
+  mutable std::mutex process_mutex;
+  mutable std::condition_variable state_cv;
+  std::atomic<bool> should_terminate;
+  std::atomic<bool> step_complete;
+=======
   std::unique_ptr<std::thread> process_thread; //!< Hilo asociado al proceso.
   mutable std::mutex process_mutex; //!< Mutex para sincronización del proceso.
   mutable std::condition_variable
@@ -55,6 +71,7 @@ struct Process {
   std::atomic<bool> should_terminate; //!< Indica si el hilo debe terminar.
   std::atomic<bool>
       step_complete; //!< Indica si el paso de ejecución está completo.
+>>>>>>> 5f194d33f4ffd74ba448b55ed4a9b91622dc142c
 
   /**
    * Constructor por defecto.
@@ -73,6 +90,9 @@ struct Process {
    */
   Process(int p, const std::string &n, int arrival, int burst, int prio = 0,
           uint32_t mem = 0);
+
+  Process(int p, const std::string &n, int arrival,
+          const std::vector<Burst> &bursts, int prio = 0, uint32_t mem = 0);
 
   Process(const Process &other) = delete;
 
@@ -119,10 +139,22 @@ struct Process {
    */
   void reset();
 
+<<<<<<< HEAD
+  // Burst sequence management
+  bool has_more_bursts() const;
+  const Burst *get_current_burst() const;
+  Burst *get_current_burst_mutable();
+  void advance_to_next_burst();
+  bool is_on_cpu_burst() const;
+  bool is_on_io_burst() const;
+  int get_total_burst_time() const;
+
+=======
   /**
    * Destructor del proceso.
    * Detiene el hilo si está en ejecución.
    */
+>>>>>>> 5f194d33f4ffd74ba448b55ed4a9b91622dc142c
   ~Process();
 
   /**
