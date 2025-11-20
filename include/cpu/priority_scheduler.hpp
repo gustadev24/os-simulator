@@ -6,9 +6,13 @@
 
 namespace OSSimulator {
 
+/**
+ * Clase que implementa el algoritmo de planificación por Prioridad.
+ */
 class PriorityScheduler : public Scheduler {
 private:
-  std::vector<std::shared_ptr<Process>> ready_queue;
+  std::vector<std::shared_ptr<Process>>
+      ready_queue; //!< Cola de procesos listos.
 
 public:
   void add_process(std::shared_ptr<Process> process) override;

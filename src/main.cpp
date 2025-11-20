@@ -122,12 +122,15 @@ void demo_priority() {
   print_results(scheduler);
 }
 
+/**
+ * @param test wawa
+*/
 int main() {
   std::cout << "\n";
-  std::cout << "╔══════════════════════════════════════════════════╗\n";
-  std::cout << "║   CPU Scheduling Algorithms Demonstration        ║\n";
-  std::cout << "║   Operating System Simulator                     ║\n";
-  std::cout << "╚══════════════════════════════════════════════════╝\n";
+  std::cout << "====================================================\n";
+  std::cout << "|   CPU Scheduling Algorithms Demonstration        |\n";
+  std::cout << "|   Operating System Simulator                     |\n";
+  std::cout << "====================================================\n";
 
   demo_fcfs();
   demo_sjf();

@@ -14,3 +14,12 @@ demo-io:
 
 clean: 
   rm -rf build
+
+build-docs:
+  doxygen
+
+docs-serve: build-docs
+  pushd docs/html && python3 -m http.server 8000 && popd
+
+docs-pdf: build-docs
+  pushd docs/latex && make && popd
