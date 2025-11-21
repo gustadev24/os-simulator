@@ -10,6 +10,8 @@
 
 namespace OSSimulator {
 
+class MetricsCollector;
+
 class IODevice {
 private:
   std::string device_name;
@@ -25,12 +27,16 @@ private:
   using CompletionCallback = std::function<void(std::shared_ptr<Process>, int)>;
   CompletionCallback completion_callback;
 
+  std::shared_ptr<MetricsCollector> metrics_collector;
+  bool last_event_was_completed;
+
 public:
   explicit IODevice(const std::string &name);
   ~IODevice() = default;
 
   void set_scheduler(std::unique_ptr<IOScheduler> sched);
   void set_completion_callback(CompletionCallback callback);
+  void set_metrics_collector(std::shared_ptr<MetricsCollector> collector);
 
   void add_io_request(std::shared_ptr<IORequest> request);
 
@@ -44,6 +50,8 @@ public:
   int get_device_switches() const { return device_switches; }
   int get_total_requests_completed() const { return total_requests_completed; }
   size_t get_queue_size() const;
+
+  void send_log_metrics(int current_time);
 
   void reset();
 };

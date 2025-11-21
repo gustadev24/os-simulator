@@ -1,11 +1,13 @@
 #include "io/io_device.hpp"
+#include "metrics/metrics_collector.hpp"
 
 namespace OSSimulator {
 
 IODevice::IODevice(const std::string &name)
     : device_name(name), scheduler(nullptr), current_request(nullptr),
       total_io_time(0), device_switches(0), total_requests_completed(0),
-      completion_callback(nullptr) {}
+      completion_callback(nullptr), metrics_collector(nullptr),
+      last_event_was_completed(false) {}
 
 void IODevice::set_scheduler(std::unique_ptr<IOScheduler> sched) {
   std::lock_guard<std::mutex> lock(device_mutex);
@@ -14,6 +16,11 @@ void IODevice::set_scheduler(std::unique_ptr<IOScheduler> sched) {
 
 void IODevice::set_completion_callback(CompletionCallback callback) {
   completion_callback = callback;
+}
+
+void IODevice::set_metrics_collector(std::shared_ptr<MetricsCollector> collector) {
+  std::lock_guard<std::mutex> lock(device_mutex);
+  metrics_collector = collector;
 }
 
 void IODevice::add_io_request(std::shared_ptr<IORequest> request) {
@@ -45,7 +52,9 @@ void IODevice::execute_step(int quantum, int current_time) {
   int time_executed = current_request->execute(quantum, current_time);
   total_io_time += time_executed;
 
-  if (current_request->is_completed()) {
+  last_event_was_completed = current_request->is_completed();
+
+  if (last_event_was_completed) {
     total_requests_completed++;
 
     if (completion_callback && current_request->process) {
@@ -89,6 +98,54 @@ void IODevice::reset() {
   total_io_time = 0;
   device_switches = 0;
   total_requests_completed = 0;
+  last_event_was_completed = false;
 }
+
+void IODevice::send_log_metrics(int current_time) {
+  std::lock_guard<std::mutex> lock(device_mutex);
+
+  if (!metrics_collector) {
+    return;
+  }
+
+  std::string event;
+  int pid = -1;
+  std::string name;
+  int remaining = 0;
+  size_t queue_size = scheduler ? scheduler->size() : 0;
+
+  if (!current_request && queue_size == 0) {
+    event = "IDLE";
+
+  } else if (last_event_was_completed) {
+    event = "COMPLETED";
+    if (current_request && current_request->process) {
+      pid = current_request->process->pid;
+      name = current_request->process->name;
+    }
+
+  } else if (current_request && current_request->process) {
+    event = "STEP";
+    pid = current_request->process->pid;
+    name = current_request->process->name;
+    remaining = current_request->burst.remaining_time;
+
+  } else {
+    event = "IDLE";
+  }
+
+  metrics_collector->log_io(
+      current_time,
+      device_name,
+      event,
+      pid,
+      name,
+      remaining,
+      queue_size);
+  
+  last_event_was_completed = false;
+}
+
+
 
 } // namespace OSSimulator

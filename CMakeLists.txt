@@ -26,9 +26,20 @@ else()
   target_compile_options(os_simulator PRIVATE -Wall -Wextra -pedantic)
 endif()
 
-# todo remove if unused
 find_package(Threads REQUIRED)
 target_link_libraries(os_simulator PRIVATE Threads::Threads)
+
+include(FetchContent)
+
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+
+FetchContent_MakeAvailable(json)
+
+target_link_libraries(os_simulator PRIVATE nlohmann_json::nlohmann_json)
 
 add_custom_command(
     TARGET os_simulator PRE_BUILD
@@ -45,7 +56,7 @@ if(BUILD_TESTS)
   FetchContent_Declare(
       Catch2
       GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-      GIT_TAG        v3.8.1 # or a later release
+      GIT_TAG        v3.8.1
     )
 
   FetchContent_MakeAvailable(Catch2)
@@ -57,12 +68,17 @@ if(BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/src/core/*.cpp
         ${PROJECT_SOURCE_DIR}/src/cpu/*.cpp
         ${PROJECT_SOURCE_DIR}/src/io/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/metrics/*.cpp
     )
   list(REMOVE_ITEM IMPL_SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp)
+
   add_executable(tests ${TEST_SOURCES} ${IMPL_SOURCES})
   target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/include)
   target_compile_definitions(tests PRIVATE PROJECT_NAME="${PROJECT_NAME}")
   target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+
+  target_link_libraries(tests PRIVATE nlohmann_json::nlohmann_json)
+
   if (MSVC)
     target_compile_options(tests PRIVATE /W4 /permissive-)
   else()
