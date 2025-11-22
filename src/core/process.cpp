@@ -1,5 +1,4 @@
 #include "core/process.hpp"
-#include <iostream>
 #include <numeric>
 
 namespace OSSimulator {
@@ -44,7 +43,7 @@ Process::Process(int p, const std::string &n, int arrival,
     }
   }
   burst_time = total_cpu_time;
-  remaining_time = burst_sequence.empty() ? 0 : burst_sequence[0].duration;
+  remaining_time = total_cpu_time;
 }
 
 Process::Process(Process &&other) noexcept

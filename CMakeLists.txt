@@ -57,6 +57,7 @@ if(BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/src/core/*.cpp
         ${PROJECT_SOURCE_DIR}/src/cpu/*.cpp
         ${PROJECT_SOURCE_DIR}/src/io/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/memory/*.cpp
     )
   list(REMOVE_ITEM IMPL_SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp)
   add_executable(tests ${TEST_SOURCES} ${IMPL_SOURCES})

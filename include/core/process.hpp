@@ -2,6 +2,7 @@
 #define PROCESS_HPP
 
 #include "core/burst.hpp"
+#include "memory/page.hpp"
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -50,6 +51,16 @@ struct Process {
   uint32_t memory_base;     //!< Dirección base de la memoria asignada.
   bool memory_allocated;    //!< Indica si la memoria ha sido asignada.
 
+  // Memory Management
+  std::vector<Page> page_table;
+  std::vector<int> memory_access_trace; // Sequence of page IDs to access
+  size_t current_access_index = 0;
+  
+  // Memory Metrics
+  int page_faults = 0;
+  int replacements = 0;
+  int active_pages_count = 0;
+
   std::vector<Burst> burst_sequence;
   size_t current_burst_index;
   int total_cpu_time;
@@ -61,6 +72,19 @@ struct Process {
   std::atomic<bool> should_terminate; //!< Indica si el hilo debe terminar.
   std::atomic<bool>
       step_complete; //!< Indica si el paso de ejecución está completo.
+
+  int get_next_page_access() const {
+      if (current_access_index < memory_access_trace.size()) {
+          return memory_access_trace[current_access_index];
+      }
+      return -1;
+  }
+  
+  void advance_page_access() {
+      if (current_access_index < memory_access_trace.size()) {
+          current_access_index++;
+      }
+  }
 
   /**
    * Constructor por defecto.

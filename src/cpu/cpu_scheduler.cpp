@@ -1,7 +1,8 @@
 #include "cpu/cpu_scheduler.hpp"
 #include "cpu/round_robin_scheduler.hpp"
+#include "io/io_manager.hpp"
+#include "io/io_request.hpp"
 #include <chrono>
-#include <thread>
 #include <iostream>
 
 namespace OSSimulator {
@@ -23,6 +24,17 @@ void CPUScheduler::set_scheduler(std::unique_ptr<Scheduler> sched) {
 
 void CPUScheduler::set_memory_callback(MemoryCheckCallback callback) {
   memory_check_callback = callback;
+}
+
+void CPUScheduler::set_io_manager(std::shared_ptr<IOManager> manager) {
+    std::lock_guard<std::mutex> lock(scheduler_mutex);
+    io_manager = manager;
+    if (io_manager) {
+        io_manager->set_completion_callback(
+                [this](std::shared_ptr<Process> proc, int completion_time) {
+                    handle_io_completion(proc, completion_time);
+                });
+    }
 }
 
 void CPUScheduler::add_process(std::shared_ptr<Process> process) {
@@ -53,7 +65,18 @@ bool CPUScheduler::check_and_allocate_memory(Process &process) {
 void CPUScheduler::add_arrived_processes() {
     for (auto &proc : all_processes) {
         if (proc->state == ProcessState::NEW && proc->has_arrived(current_time)) {
-            if (check_and_allocate_memory(*proc)) {
+            bool allocated = false;
+            if (memory_manager) {
+                if (memory_manager->allocate_initial_memory(*proc)) {
+                    memory_manager->register_process(proc);
+                    allocated = true;
+                    proc->memory_allocated = true;
+                }
+            } else {
+                allocated = check_and_allocate_memory(*proc);
+            }
+
+            if (allocated) {
                 proc->state = ProcessState::READY;
                 scheduler->add_process(proc);
             }
@@ -62,18 +85,33 @@ void CPUScheduler::add_arrived_processes() {
 }
 
 void CPUScheduler::execute_step(int quantum) {
-    std::lock_guard<std::mutex> scheduler_lock(scheduler_mutex);
+    std::unique_lock<std::mutex> scheduler_lock(scheduler_mutex);
 
     add_arrived_processes();
 
     if (!scheduler->has_processes()) {
-        if (has_pending_processes()) current_time++;
+        if (has_pending_processes()) {
+            int idle_start = current_time;
+            advance_io_devices(1, idle_start, scheduler_lock);
+            current_time++;
+        }
         return;
     }
 
     auto next = scheduler->get_next_process();
+    while (next &&
+           (next->state == ProcessState::WAITING ||
+            next->state == ProcessState::TERMINATED)) {
+        scheduler->remove_process(next->pid);
+        next = scheduler->has_processes() ? scheduler->get_next_process() : nullptr;
+    }
+
     if (!next) {
-        current_time++;
+        if (has_pending_processes()) {
+            int idle_start = current_time;
+            advance_io_devices(1, idle_start, scheduler_lock);
+            current_time++;
+        }
         return;
     }
 
@@ -82,11 +120,39 @@ void CPUScheduler::execute_step(int quantum) {
 
     running_process = next;
 
+    if (memory_manager) {
+        int page_id = running_process->get_next_page_access();
+        if (page_id != -1) {
+             if (!memory_manager->request_page(*running_process, page_id, false, current_time)) {
+                 memory_manager->handle_page_fault(*running_process, page_id, current_time);
+                 scheduler->add_process(running_process);
+                 running_process = nullptr;
+                 return;
+             }
+             running_process->advance_page_access();
+        }
+    }
+
+    auto *current_burst = running_process->get_current_burst_mutable();
+    if (current_burst && current_burst->type == BurstType::IO && io_manager) {
+        running_process->state = ProcessState::WAITING;
+        scheduler->remove_process(running_process->pid);
+
+        auto request = std::make_shared<IORequest>(running_process, *current_burst, current_time);
+        io_manager->submit_io_request(request);
+
+        running_process = nullptr;
+        return;
+    }
+
     notify_process_running(running_process);
     wait_for_process_step(running_process);
 
+    int step_start_time = current_time;
     int time_executed = running_process->execute(quantum, current_time);
     current_time += time_executed;
+
+    advance_io_devices(time_executed, step_start_time, scheduler_lock);
 
     if (running_process->is_completed()) {
         running_process->calculate_metrics();
@@ -201,6 +267,40 @@ void CPUScheduler::wait_for_process_step(std::shared_ptr<Process> proc) {
         proc->state = ProcessState::READY;
         proc->state_cv.notify_all();
     }
+}
+
+void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
+                                        int completion_time) {
+    if (!proc) return;
+
+    std::lock_guard<std::mutex> lock(scheduler_mutex);
+
+    auto *burst = proc->get_current_burst_mutable();
+    if (burst && burst->type == BurstType::IO) {
+        burst->remaining_time = 0;
+    }
+
+    proc->advance_to_next_burst();
+
+    if (proc->is_completed()) {
+        proc->completion_time = completion_time;
+        proc->calculate_metrics();
+        proc->stop_thread();
+        proc->state = ProcessState::TERMINATED;
+        completed_processes.push_back(proc);
+    } else {
+        proc->state = ProcessState::READY;
+        if (scheduler) scheduler->add_process(proc);
+    }
+}
+
+void CPUScheduler::advance_io_devices(int time_slice, int step_start_time,
+                                      std::unique_lock<std::mutex> &lock) {
+    if (!io_manager || time_slice <= 0) return;
+
+    lock.unlock();
+    io_manager->execute_all_devices(time_slice, step_start_time);
+    lock.lock();
 }
 
 void CPUScheduler::terminate_all_threads() {

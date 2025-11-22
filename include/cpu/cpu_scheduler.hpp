@@ -3,6 +3,7 @@
 
 #include "core/process.hpp"
 #include "cpu/scheduler.hpp"
+#include "memory/memory_manager.hpp"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -10,6 +11,8 @@
 #include <vector>
 
 namespace OSSimulator {
+
+class IOManager;
 
 /**
  * Clase que representa el planificador de CPU en la simulación.
@@ -40,6 +43,9 @@ private:
   std::atomic<bool>
       simulation_running; //!< Indica si la simulación está en ejecución.
 
+  std::shared_ptr<MemoryManager> memory_manager;
+    std::shared_ptr<IOManager> io_manager;
+
   /**
    * Crea y lanza un hilo para el proceso dado.
    *
@@ -66,6 +72,10 @@ private:
    */
   void terminate_all_threads();
 
+    void handle_io_completion(std::shared_ptr<Process> proc, int completion_time);
+    void advance_io_devices(int time_slice, int step_start_time,
+                                                    std::unique_lock<std::mutex> &lock);
+
 public:
   /**
    * Constructor por defecto.
@@ -84,6 +94,10 @@ public:
    * @param sched Puntero a la estrategia de planificación.
    */
   void set_scheduler(std::unique_ptr<Scheduler> sched);
+
+  void set_memory_manager(std::shared_ptr<MemoryManager> mm) { memory_manager = mm; }
+
+    void set_io_manager(std::shared_ptr<IOManager> manager);
 
   /**
    * Establece la función de verificación de memoria.
