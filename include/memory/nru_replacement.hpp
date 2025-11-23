@@ -6,15 +6,16 @@
 namespace OSSimulator {
 
 /**
- * Implementación del algoritmo de reemplazo Not Recently Used (NRU).
+ * Implementación del algoritmo de reemplazo NRU.
  */
 class NRUReplacement : public ReplacementAlgorithm {
 public:
-    int select_victim(const std::vector<Frame>& frames, 
-                      const std::unordered_map<int, std::shared_ptr<Process>>& process_map,
-                      int current_time) override;
+  int select_victim(
+      const std::vector<Frame> &frames,
+      const std::unordered_map<int, std::shared_ptr<Process>> &process_map,
+      int current_time) override;
 };
 
-}
+} // namespace OSSimulator
 
 #endif

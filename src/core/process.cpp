@@ -27,9 +27,9 @@ Process::Process(int p, const std::string &n, int arrival, int burst, int prio,
 
 Process::Process(int p, const std::string &n, int arrival,
                  const std::vector<Burst> &bursts, int prio, uint32_t mem)
-    : pid(p), name(n), arrival_time(arrival), burst_time(0),
-      remaining_time(0), completion_time(0), waiting_time(0),
-      turnaround_time(0), response_time(-1), start_time(-1), priority(prio),
+    : pid(p), name(n), arrival_time(arrival), burst_time(0), remaining_time(0),
+      completion_time(0), waiting_time(0), turnaround_time(0),
+      response_time(-1), start_time(-1), priority(prio),
       state(ProcessState::NEW), first_execution(true), last_execution_time(0),
       memory_required(mem), memory_base(0), memory_allocated(false),
       burst_sequence(bursts), current_burst_index(0), total_cpu_time(0),
@@ -51,9 +51,10 @@ Process::Process(Process &&other) noexcept
       arrival_time(other.arrival_time), burst_time(other.burst_time),
       remaining_time(other.remaining_time),
       completion_time(other.completion_time), waiting_time(other.waiting_time),
-      turnaround_time(other.turnaround_time), response_time(other.response_time),
-      start_time(other.start_time), priority(other.priority),
-      state(other.state.load()), first_execution(other.first_execution),
+      turnaround_time(other.turnaround_time),
+      response_time(other.response_time), start_time(other.start_time),
+      priority(other.priority), state(other.state.load()),
+      first_execution(other.first_execution),
       last_execution_time(other.last_execution_time),
       memory_required(other.memory_required), memory_base(other.memory_base),
       memory_allocated(other.memory_allocated),
@@ -118,8 +119,9 @@ int Process::execute(int quantum, int current_time) {
 
   Burst &current_burst = burst_sequence[current_burst_index];
 
-  int time_executed = (quantum > 0) ? std::min(quantum, current_burst.remaining_time)
-                                    : current_burst.remaining_time;
+  int time_executed = (quantum > 0)
+                          ? std::min(quantum, current_burst.remaining_time)
+                          : current_burst.remaining_time;
 
   {
     std::lock_guard<std::mutex> lock(process_mutex);
@@ -168,7 +170,8 @@ void Process::start_thread() {
   should_terminate = false;
   step_complete = false;
 
-  process_thread = std::make_unique<std::thread>(&Process::thread_function, this);
+  process_thread =
+      std::make_unique<std::thread>(&Process::thread_function, this);
 }
 
 void Process::stop_thread() {
@@ -197,14 +200,14 @@ void Process::thread_function() {
   while (!should_terminate.load()) {
     std::unique_lock<std::mutex> lock(process_mutex);
 
-    // Wait for RUNNING state and for previous step to be consumed
     state_cv.wait(lock, [this]() {
-      return (state.load() == ProcessState::RUNNING && !step_complete.load()) || should_terminate.load();
+      return (state.load() == ProcessState::RUNNING && !step_complete.load()) ||
+             should_terminate.load();
     });
 
-    if (should_terminate.load()) break;
+    if (should_terminate.load())
+      break;
 
-    // Minimal yield to simulate context switching without significant delay
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     step_complete.store(true);
@@ -212,10 +215,7 @@ void Process::thread_function() {
   }
 }
 
-
-Process::~Process() {
-  stop_thread();
-}
+Process::~Process() { stop_thread(); }
 
 bool Process::has_more_bursts() const {
   return current_burst_index < burst_sequence.size();

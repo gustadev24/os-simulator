@@ -18,12 +18,12 @@ namespace OSSimulator {
  * Estados posibles de un proceso en la simulación.
  */
 enum class ProcessState {
-  NEW,       //!< Proceso recién creado.
-  READY,     //!< Proceso listo para ejecutarse.
-    MEMORY_WAITING, //!< Proceso bloqueado esperando carga de páginas.
-  RUNNING,   //!< Proceso en ejecución.
-  WAITING,   //!< Proceso en espera.
-  TERMINATED //!< Proceso terminado.
+  NEW,            //!< Proceso recién creado.
+  READY,          //!< Proceso listo para ejecutarse.
+  MEMORY_WAITING, //!< Proceso bloqueado esperando carga de páginas.
+  RUNNING,        //!< Proceso en ejecución.
+  WAITING,        //!< Proceso en espera.
+  TERMINATED      //!< Proceso terminado.
 };
 
 /**
@@ -53,20 +53,21 @@ struct Process {
   uint32_t memory_base;     //!< Dirección base de la memoria asignada.
   bool memory_allocated;    //!< Indica si la memoria ha sido asignada.
 
-  // Memory Management
-  std::vector<Page> page_table;
-  std::vector<int> memory_access_trace; // Sequence of page IDs to access
-  size_t current_access_index = 0;
-  
-  // Memory Metrics
-  int page_faults = 0;
-  int replacements = 0;
-  int active_pages_count = 0;
+  std::vector<Page> page_table; //!< Tabla de páginas asignadas al proceso.
+  std::vector<int>
+      memory_access_trace; //!< Rastro de accesos a memoria (índices de página).
+  size_t current_access_index =
+      0; //!< Índice actual dentro del rastro de accesos.
 
-  std::vector<Burst> burst_sequence;
-  size_t current_burst_index;
-  int total_cpu_time;
-  int total_io_time;
+  int page_faults = 0;        //!< Contador de fallos de página del proceso.
+  int replacements = 0;       //!< Contador de reemplazos de páginas realizados.
+  int active_pages_count = 0; //!< Número de páginas activas actualmente.
+
+  std::vector<Burst>
+      burst_sequence;         //!< Secuencia de ráfagas (CPU/E/S) del proceso.
+  size_t current_burst_index; //!< Índice de la ráfaga actual.
+  int total_cpu_time;         //!< Tiempo total consumido por CPU.
+  int total_io_time;          //!< Tiempo total consumido en E/S.
   std::unique_ptr<std::thread> process_thread; //!< Hilo asociado al proceso.
   mutable std::mutex process_mutex; //!< Mutex para sincronización del proceso.
   mutable std::condition_variable
@@ -75,17 +76,24 @@ struct Process {
   std::atomic<bool>
       step_complete; //!< Indica si el paso de ejecución está completo.
 
+  /**
+   * Obtiene el siguiente acceso a página según el rastro de accesos.
+   * @return Índice de página del siguiente acceso, o -1 si no hay más accesos.
+   */
   int get_next_page_access() const {
-      if (current_access_index < memory_access_trace.size()) {
-          return memory_access_trace[current_access_index];
-      }
-      return -1;
+    if (current_access_index < memory_access_trace.size()) {
+      return memory_access_trace[current_access_index];
+    }
+    return -1;
   }
-  
+
+  /**
+   * Avanza el índice del rastro de accesos de memoria.
+   */
   void advance_page_access() {
-      if (current_access_index < memory_access_trace.size()) {
-          current_access_index++;
-      }
+    if (current_access_index < memory_access_trace.size()) {
+      current_access_index++;
+    }
   }
 
   /**
@@ -106,6 +114,15 @@ struct Process {
   Process(int p, const std::string &n, int arrival, int burst, int prio = 0,
           uint32_t mem = 0);
 
+  /**
+   * Constructor parametrizado con secuencia de ráfagas.
+   * @param p ID del proceso.
+   * @param n Nombre del proceso.
+   * @param arrival Tiempo de llegada.
+   * @param bursts Secuencia de ráfagas del proceso.
+   * @param prio Prioridad del proceso.
+   * @param mem Memoria requerida por el proceso.
+   */
   Process(int p, const std::string &n, int arrival,
           const std::vector<Burst> &bursts, int prio = 0, uint32_t mem = 0);
 
@@ -154,13 +171,51 @@ struct Process {
    */
   void reset();
 
-  // Burst sequence management
+  /**
+   * Verifica si el proceso tiene más ráfagas por ejecutar.
+   *
+   * @return true si hay más ráfagas, false en caso contrario.
+   */
   bool has_more_bursts() const;
+
+  /**
+   * Obtiene la ráfaga actual del proceso.
+   *
+   * @return Puntero constante a la ráfaga actual.
+   */
   const Burst *get_current_burst() const;
+
+  /**
+   * Obtiene la ráfaga actual del proceso (mutable).
+   *
+   * @return Puntero mutable a la ráfaga actual.
+   */
   Burst *get_current_burst_mutable();
+
+  /**
+   * Avanza a la siguiente ráfaga en la secuencia.
+   */
   void advance_to_next_burst();
+
+  /**
+   * Verifica si el proceso está en una ráfaga de CPU.
+   *
+   * @return true si está en ráfaga de CPU, false en caso contrario.
+   */
   bool is_on_cpu_burst() const;
+
+  /**
+   * Verifica si el proceso está en una ráfaga de E/S.
+   *
+   * @return true si está en ráfaga de E/S, false en caso contrario.
+   */
   bool is_on_io_burst() const;
+
+  /**
+   * Obtiene el tiempo total de ráfaga del proceso.
+   *
+   * @return Tiempo total de ráfaga.
+   */
   int get_total_burst_time() const;
 
   /**

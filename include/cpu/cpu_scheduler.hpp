@@ -43,9 +43,10 @@ private:
   std::atomic<bool>
       simulation_running; //!< Indica si la simulación está en ejecución.
 
-  std::shared_ptr<MemoryManager> memory_manager;
-    std::shared_ptr<IOManager> io_manager;
-  bool pending_preemption = false;
+  std::shared_ptr<MemoryManager> memory_manager; //!< Gestor de memoria.
+  std::shared_ptr<IOManager> io_manager;         //!< Gestor de E/S.
+  bool pending_preemption =
+      false; //!< Indica si se debe preemptar el proceso actual.
 
   /**
    * Crea y lanza un hilo para el proceso dado.
@@ -73,14 +74,55 @@ private:
    */
   void terminate_all_threads();
 
-    void handle_io_completion(std::shared_ptr<Process> proc, int completion_time);
-    void advance_io_devices(int time_slice, int step_start_time,
-                                                    std::unique_lock<std::mutex> &lock);
-    void handle_memory_ready(std::shared_ptr<Process> proc);
-    void advance_memory_manager(int time_slice, int step_start_time,
-                                std::unique_lock<std::mutex> &lock);
-    void request_preemption_if_needed(std::shared_ptr<Process> proc);
-    bool should_preempt_priority(std::shared_ptr<Process> candidate) const;
+  /**
+    * Maneja la finalización de una operación de E/S.
+    *
+    * @param proc Proceso que completó la E/S.
+    * @param completion_time Tiempo de finalización de la E/S.
+    */
+  void handle_io_completion(std::shared_ptr<Process> proc, int completion_time);
+
+  /**
+   * Avanza los dispositivos de E/S en el tiempo.
+   *
+   * @param time_slice Quantum de tiempo para avanzar.
+   * @param step_start_time Tiempo de inicio del paso actual.
+   * @param lock Mutex bloqueado para sincronización.
+   */
+  void advance_io_devices(int time_slice, int step_start_time,
+                          std::unique_lock<std::mutex> &lock);
+
+  /**
+   * Maneja la preparación de la memoria para un proceso.
+   *
+   * @param proc Proceso que está listo para la memoria.
+   */
+  void handle_memory_ready(std::shared_ptr<Process> proc);
+
+  /**
+   * Avanza el gestor de memoria en el tiempo.
+   *
+   * @param time_slice Quantum de tiempo para avanzar.
+   * @param step_start_time Tiempo de inicio del paso actual.
+   * @param lock Mutex bloqueado para sincronización.
+   */
+  void advance_memory_manager(int time_slice, int step_start_time,
+                              std::unique_lock<std::mutex> &lock);
+
+  /**
+   * Solicita la preempción si es necesario.
+   *
+   * @param proc Proceso que podría ser preemptado.
+   */
+  void request_preemption_if_needed(std::shared_ptr<Process> proc);
+
+  /**
+   * Verifica si se debe preemptar un proceso basado en la prioridad.
+   *
+   * @param candidate Proceso candidato para preempción.
+   * @return true si se debe preemptar, false en caso contrario.
+   */
+  bool should_preempt_priority(std::shared_ptr<Process> candidate) const;
 
 public:
   /**
@@ -101,9 +143,19 @@ public:
    */
   void set_scheduler(std::unique_ptr<Scheduler> sched);
 
+  /**
+     * Establece el gestor de memoria a utilizar.
+     *
+     * @param mm Puntero al gestor de memoria.
+     */
   void set_memory_manager(std::shared_ptr<MemoryManager> mm);
 
-    void set_io_manager(std::shared_ptr<IOManager> manager);
+  /**
+   * Establece el gestor de E/S a utilizar.
+   *
+   * @param manager Puntero al gestor de E/S.
+   */
+  void set_io_manager(std::shared_ptr<IOManager> manager);
 
   /**
    * Establece la función de verificación de memoria.

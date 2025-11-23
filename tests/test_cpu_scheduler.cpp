@@ -22,7 +22,7 @@ std::shared_ptr<IOManager> build_test_io_manager() {
   return io_manager;
 }
 
-}
+} // namespace
 
 TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   SECTION("Single process execution") {
@@ -236,15 +236,15 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
     auto io_manager = build_test_io_manager();
     cpu_scheduler.set_io_manager(io_manager);
 
-    auto high = std::make_shared<Process>(1, "High", 0,
+    auto high = std::make_shared<Process>(
+        1, "High", 0,
         std::vector<Burst>{Burst(BurstType::CPU, 1),
                            Burst(BurstType::IO, 1, "disk"),
                            Burst(BurstType::CPU, 2)},
         0);
 
-    auto low = std::make_shared<Process>(2, "Low", 0,
-        std::vector<Burst>{Burst(BurstType::CPU, 6)},
-        5);
+    auto low = std::make_shared<Process>(
+        2, "Low", 0, std::vector<Burst>{Burst(BurstType::CPU, 6)}, 5);
 
     cpu_scheduler.add_process(high);
     cpu_scheduler.add_process(low);

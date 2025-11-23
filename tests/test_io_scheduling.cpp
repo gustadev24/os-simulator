@@ -122,12 +122,12 @@ TEST_CASE("IO FCFS Scheduler", "[io][scheduler][fcfs]") {
   auto proc2 = std::make_shared<Process>(2, "P2", 1, 8);
   auto proc3 = std::make_shared<Process>(3, "P3", 2, 6);
 
-  auto req1 = std::make_shared<IORequest>(
-      proc1, Burst(BurstType::IO, 5, "disk"), 10);
-  auto req2 = std::make_shared<IORequest>(
-      proc2, Burst(BurstType::IO, 3, "disk"), 11);
-  auto req3 = std::make_shared<IORequest>(
-      proc3, Burst(BurstType::IO, 4, "disk"), 12);
+  auto req1 =
+      std::make_shared<IORequest>(proc1, Burst(BurstType::IO, 5, "disk"), 10);
+  auto req2 =
+      std::make_shared<IORequest>(proc2, Burst(BurstType::IO, 3, "disk"), 11);
+  auto req3 =
+      std::make_shared<IORequest>(proc3, Burst(BurstType::IO, 4, "disk"), 12);
 
   SECTION("FCFS order") {
     scheduler.add_request(req1);
@@ -159,10 +159,10 @@ TEST_CASE("IO Round Robin Scheduler", "[io][scheduler][rr]") {
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
   auto proc2 = std::make_shared<Process>(2, "P2", 1, 8);
 
-  auto req1 = std::make_shared<IORequest>(
-      proc1, Burst(BurstType::IO, 10, "disk"), 0);
-  auto req2 = std::make_shared<IORequest>(
-      proc2, Burst(BurstType::IO, 8, "disk"), 1);
+  auto req1 =
+      std::make_shared<IORequest>(proc1, Burst(BurstType::IO, 10, "disk"), 0);
+  auto req2 =
+      std::make_shared<IORequest>(proc2, Burst(BurstType::IO, 8, "disk"), 1);
 
   scheduler.add_request(req1);
   scheduler.add_request(req2);
@@ -185,15 +185,14 @@ TEST_CASE("IO Device with FCFS scheduling", "[io][device]") {
   int completed_count = 0;
   int last_completion_time = 0;
 
-  device.set_completion_callback(
-      [&](std::shared_ptr<Process> proc, int time) {
-        completed_count++;
-        last_completion_time = time;
-      });
+  device.set_completion_callback([&](std::shared_ptr<Process> proc, int time) {
+    completed_count++;
+    last_completion_time = time;
+  });
 
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
-  auto req1 = std::make_shared<IORequest>(
-      proc1, Burst(BurstType::IO, 5, "disk"), 0);
+  auto req1 =
+      std::make_shared<IORequest>(proc1, Burst(BurstType::IO, 5, "disk"), 0);
 
   device.add_io_request(req1);
   REQUIRE(device.has_pending_requests());
@@ -216,41 +215,36 @@ TEST_CASE("IO Device with Round Robin scheduling", "[io][device][rr]") {
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
   auto proc2 = std::make_shared<Process>(2, "P2", 1, 8);
 
-  auto req1 = std::make_shared<IORequest>(
-      proc1, Burst(BurstType::IO, 10, "disk"), 0);
-  auto req2 = std::make_shared<IORequest>(
-      proc2, Burst(BurstType::IO, 6, "disk"), 1);
+  auto req1 =
+      std::make_shared<IORequest>(proc1, Burst(BurstType::IO, 10, "disk"), 0);
+  auto req2 =
+      std::make_shared<IORequest>(proc2, Burst(BurstType::IO, 6, "disk"), 1);
 
   device.add_io_request(req1);
   device.add_io_request(req2);
 
   int current_time = 0;
 
-  // First quantum: P1 executes for 4
   device.execute_step(4, current_time);
   current_time += 4;
   REQUIRE(device.has_pending_requests());
   REQUIRE(completed_count == 0);
 
-  // Second quantum: P2 executes for 4
   device.execute_step(4, current_time);
   current_time += 4;
   REQUIRE(device.has_pending_requests());
   REQUIRE(completed_count == 0);
 
-  // Third quantum: P1 executes for 4
   device.execute_step(4, current_time);
   current_time += 4;
   REQUIRE(device.has_pending_requests());
   REQUIRE(completed_count == 0);
 
-  // Fourth quantum: P2 executes for 2 and completes
   device.execute_step(4, current_time);
   current_time += 2;
   REQUIRE(device.has_pending_requests());
   REQUIRE(completed_count == 1);
 
-  // Fifth quantum: P1 executes for 2 and completes
   device.execute_step(4, current_time);
   current_time += 2;
   REQUIRE_FALSE(device.has_pending_requests());
@@ -278,8 +272,8 @@ TEST_CASE("IO Manager with multiple devices", "[io][manager]") {
       [&](std::shared_ptr<Process> proc, int time) { completed_count++; });
 
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
-  auto req1 = std::make_shared<IORequest>(
-      proc1, Burst(BurstType::IO, 5, "disk"), 0);
+  auto req1 =
+      std::make_shared<IORequest>(proc1, Burst(BurstType::IO, 5, "disk"), 0);
 
   manager.submit_io_request(req1);
 

@@ -1,96 +1,186 @@
 #ifndef MEMORY_MANAGER_HPP
 #define MEMORY_MANAGER_HPP
 
-#include "memory/page.hpp"
 #include "memory/replacement_algorithm.hpp"
-#include <algorithm>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
-#include <optional>
 #include <vector>
 
 namespace OSSimulator {
 
-// Forward declaration to avoid circular dependency
 struct Process;
 
+/**
+ * Clase que gestiona la memoria en la simulación.
+ */
 class MemoryManager {
 public:
-    using ProcessReadyCallback = std::function<void(std::shared_ptr<Process>)>;
+  using ProcessReadyCallback = std::function<void(std::shared_ptr<Process>)>;
 
-    MemoryManager(int total_frames, std::unique_ptr<ReplacementAlgorithm> algo,
-                  int page_fault_latency = 1);
+  /**
+   * Constructor.
+   * @param total_frames Número total de marcos físicos.
+   * @param algo Algoritmo de reemplazo a utilizar.
+   * @param page_fault_latency Latencia (en ticks) para cargar una página.
+   */
+  MemoryManager(int total_frames, std::unique_ptr<ReplacementAlgorithm> algo,
+                int page_fault_latency = 1);
 
-    // Register a process to be managed (needed for victim selection lookups)
-    void register_process(std::shared_ptr<Process> process);
-    void unregister_process(int pid);
+  /**
+   * Registra un proceso para gestión de memoria.
+   */
+  void register_process(std::shared_ptr<Process> process);
 
-    void set_ready_callback(ProcessReadyCallback callback);
+  /**
+   * Elimina el registro de un proceso.
+   */
+  void unregister_process(int pid);
 
-    // Try to allocate initial pages. Returns true if successful.
-    bool allocate_initial_memory(Process& process);
+  /**
+   * Establece el callback que se llamará cuando un proceso quede listo tras cargar páginas.
+   */
+  void set_ready_callback(ProcessReadyCallback callback);
 
-    // Ensure that every page required by the process is resident before CPU use.
-    // Returns true if the process can execute immediately, false if it was queued for loading.
-    bool prepare_process_for_cpu(std::shared_ptr<Process> process, int current_time);
+  /**
+   * Intenta asignar memoria inicial al proceso.
+   * @return true si la asignación inicial fue posible.
+   */
+  bool allocate_initial_memory(Process &process);
 
-    // Advance the asynchronous page-fault queue by a duration.
-    void advance_fault_queue(int duration, int start_time);
+  /**
+   * Prepara un proceso para ser ejecutado en CPU (resuelve faltas de página pendientes).
+   */
+  bool prepare_process_for_cpu(std::shared_ptr<Process> process,
+                               int current_time);
 
-    // Mark all of a process' pages as evictable (used when it leaves the CPU).
-    void mark_process_inactive(const Process& process);
+  /**
+   * Avanza la cola de fallos de página en el tiempo.
+   */
+  void advance_fault_queue(int duration, int start_time);
 
-    // Release all frames held by process
-    void release_process_memory(int pid);
+  /**
+   * Marca un proceso como inactivo respecto a la memoria.
+   */
+  void mark_process_inactive(const Process &process);
 
-    // Metrics
-    int get_total_page_faults() const;
-    int get_total_replacements() const;
+  /**
+   * Libera la memoria asociada a un proceso.
+   */
+  void release_process_memory(int pid);
+
+  /**
+   * Obtiene el número total de fallos de página ocurridos.
+   */
+  int get_total_page_faults() const;
+
+  /**
+   * Obtiene el número total de reemplazos de páginas realizados.
+   */
+  int get_total_replacements() const;
 
 private:
-    int total_frames;
-    std::unique_ptr<ReplacementAlgorithm> algorithm;
-    int page_fault_latency;
-    
-    std::vector<Frame> frames;
-    std::unordered_map<int, std::shared_ptr<Process>> process_map;
-    std::mutex mutex_;
+  int total_frames; //!< Número de marcos físicos.
+  std::unique_ptr<ReplacementAlgorithm>
+      algorithm;          //!< Algoritmo de reemplazo usado.
+  int page_fault_latency; //!< Latencia para cargar páginas.
 
-    struct PageLoadTask {
-        std::shared_ptr<Process> process;
-        int page_id;
-        int remaining_time;
-        int frame_id;
-        int enqueue_time;
-    };
+  std::vector<Frame> frames; //!< Marcos físicos.
+  std::unordered_map<int, std::shared_ptr<Process>>
+      process_map;   //!< Procesos registrados.
+  std::mutex mutex_; //!< Mutex para operaciones internas.
 
-    std::deque<PageLoadTask> fault_queue;
-    std::optional<PageLoadTask> active_task;
-    std::unordered_map<int, std::unordered_set<int>> pending_pages_by_process;
-    std::unordered_set<int> processes_waiting_on_memory;
-    ProcessReadyCallback ready_callback;
-    int memory_time = 0;
-    
-    // Metrics
-    int total_page_faults = 0;
-    int total_replacements = 0;
+  struct PageLoadTask {
+    std::shared_ptr<Process> process; //!< Proceso al que pertenece la página.
+    int page_id;                      //!< ID de la página a cargar.
+    int remaining_time; //!< Tiempo restante para completar la carga.
+    int frame_id;       //!< Marco destino (si reservado).
+    int enqueue_time;   //!< Tiempo en que se encoló la tarea.
+  };
 
-    int find_free_frame();
-    bool are_all_pages_resident(const Process& process) const;
-    void enqueue_missing_pages(std::shared_ptr<Process> process,
-                               const std::vector<int>& missing_pages,
-                               int current_time);
-    void start_next_task_if_possible(int current_time);
-    bool reserve_frame_for_task(PageLoadTask& task);
-    std::shared_ptr<Process> complete_active_task(int completion_time);
-    void evict_frame(int frame_idx);
-    void set_process_pages_referenced(const Process& process, bool referenced);
+  std::deque<PageLoadTask>
+      fault_queue; //!< Cola de cargas pendientes por fallo de página.
+  std::optional<PageLoadTask>
+      active_task; //!< Tarea de carga activa (si existe).
+  std::unordered_map<int, std::unordered_set<int>>
+      pending_pages_by_process; //!< Páginas pendientes por proceso.
+  std::unordered_set<int>
+      processes_waiting_on_memory; //!< PIDs esperando memoria.
+  ProcessReadyCallback
+      ready_callback;  //!< Callback a invocar cuando un proceso quede listo.
+  int memory_time = 0; //!< Reloj interno para la gestión de memoria.
+
+  int total_page_faults = 0;  //!< Contador total de fallos de página.
+  int total_replacements = 0; //!< Contador total de reemplazos.
+
+  /**
+   * Busca un marco físico libre.
+   * @return Índice del marco libre, o -1 si no hay ninguno.
+   */
+  int find_free_frame();
+
+  /**   
+   * Verifica si todas las páginas de un proceso están residentes en memoria.
+   * 
+   * @param process Proceso a verificar.
+   * @return true si todas las páginas están en memoria, false en caso contrario.
+   */
+  bool are_all_pages_resident(const Process &process) const;
+
+  /**
+    * Encola las páginas faltantes de un proceso para carga.
+    * 
+    * @param process Proceso al que pertenecen las páginas.
+    * @param missing_pages Vector con los IDs de las páginas faltantes.
+    * @param current_time Tiempo actual para registrar el encolado.
+    */
+  void enqueue_missing_pages(std::shared_ptr<Process> process,
+                             const std::vector<int> &missing_pages,
+                             int current_time);
+
+  /**   
+   * Inicia la siguiente tarea de carga si es posible.
+   * 
+   * @param current_time Tiempo actual para iniciar la tarea.
+   */
+  void start_next_task_if_possible(int current_time);
+
+  /**   
+   * Reserva un marco para la tarea de carga dada.
+   * 
+   * @param task Tarea de carga para la cual se reserva el marco.
+   * @return true si se pudo reservar un marco, false en caso contrario.
+   */
+  bool reserve_frame_for_task(PageLoadTask &task);
+
+  /**   
+   * Completa la tarea de carga activa y actualiza el estado del proceso.
+   * 
+   * @param completion_time Tiempo en que se completa la carga.
+   * @return Puntero al proceso que completó la carga.
+   */
+  std::shared_ptr<Process> complete_active_task(int completion_time);
+
+  /**   
+   * Libera un marco físico y actualiza el estado correspondiente.
+   * 
+   * @param frame_idx Índice del marco a liberar.
+   */
+  void evict_frame(int frame_idx);
+
+  /**   
+   * Marca todas las páginas de un proceso como referenciadas o no referenciadas.
+   * 
+   * @param process Proceso cuyas páginas se van a marcar.
+   * @param referenced Valor para establecer en el bit de referencia.
+   */
+  void set_process_pages_referenced(const Process &process, bool referenced);
 };
 
-}
+} // namespace OSSimulator
 
 #endif

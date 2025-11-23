@@ -5,13 +5,14 @@ namespace OSSimulator {
 
 void SJFScheduler::add_process(std::shared_ptr<Process> process) {
   ready_queue.push_back(process);
-  std::sort(ready_queue.begin(), ready_queue.end(),
-            [](const std::shared_ptr<Process> &a, const std::shared_ptr<Process> &b) {
-              if (a->remaining_time == b->remaining_time) {
-                return a->arrival_time < b->arrival_time;
-              }
-              return a->remaining_time < b->remaining_time;
-            });
+  std::sort(
+      ready_queue.begin(), ready_queue.end(),
+      [](const std::shared_ptr<Process> &a, const std::shared_ptr<Process> &b) {
+        if (a->remaining_time == b->remaining_time) {
+          return a->arrival_time < b->arrival_time;
+        }
+        return a->remaining_time < b->remaining_time;
+      });
 }
 
 std::shared_ptr<Process> SJFScheduler::get_next_process() {

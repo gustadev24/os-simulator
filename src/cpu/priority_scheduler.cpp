@@ -5,13 +5,14 @@ namespace OSSimulator {
 
 void PriorityScheduler::add_process(std::shared_ptr<Process> process) {
   ready_queue.push_back(process);
-  std::sort(ready_queue.begin(), ready_queue.end(),
-            [](const std::shared_ptr<Process> &a, const std::shared_ptr<Process> &b) {
-              if (a->priority == b->priority) {
-                return a->arrival_time < b->arrival_time;
-              }
-              return a->priority < b->priority;
-            });
+  std::sort(
+      ready_queue.begin(), ready_queue.end(),
+      [](const std::shared_ptr<Process> &a, const std::shared_ptr<Process> &b) {
+        if (a->priority == b->priority) {
+          return a->arrival_time < b->arrival_time;
+        }
+        return a->priority < b->priority;
+      });
 }
 
 std::shared_ptr<Process> PriorityScheduler::get_next_process() {
