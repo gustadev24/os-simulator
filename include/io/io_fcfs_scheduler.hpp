@@ -7,9 +7,12 @@
 
 namespace OSSimulator {
 
+/**
+ * Clase que implementa el algoritmo de planificación First Come, First Served (FCFS) para E/S.
+ */
 class IOFCFSScheduler : public IOScheduler {
 private:
-  std::deque<std::shared_ptr<IORequest>> queue;
+  std::deque<std::shared_ptr<IORequest>> queue; //!< Cola de solicitudes de E/S.
 
 public:
   void add_request(std::shared_ptr<IORequest> request) override;
