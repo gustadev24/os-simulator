@@ -49,14 +49,14 @@ TEST_CASE("Full system integration - single process", "[integration]") {
     REQUIRE(memory_manager->get_total_page_faults() == 2);
     REQUIRE(memory_manager->get_total_replacements() == 0);
     REQUIRE_FALSE(io_manager->has_pending_io());
-    REQUIRE(cpu_scheduler.get_current_time() == 5);
+    REQUIRE(cpu_scheduler.get_current_time() == 7);
 }
 
 TEST_CASE("Full system integration - multiple processes", "[integration]") {
     CPUScheduler cpu_scheduler;
     cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
 
-    auto memory_manager = std::make_shared<MemoryManager>(3, std::make_unique<FIFOReplacement>());
+    auto memory_manager = std::make_shared<MemoryManager>(5, std::make_unique<FIFOReplacement>());
     cpu_scheduler.set_memory_manager(memory_manager);
 
     auto io_manager = build_default_io_manager();
@@ -87,8 +87,8 @@ TEST_CASE("Full system integration - multiple processes", "[integration]") {
         return proc->state == ProcessState::TERMINATED;
     }));
 
-    REQUIRE(memory_manager->get_total_page_faults() == 3);
+    REQUIRE(memory_manager->get_total_page_faults() == 5);
     REQUIRE(memory_manager->get_total_replacements() == 0);
     REQUIRE_FALSE(io_manager->has_pending_io());
-    REQUIRE(cpu_scheduler.get_current_time() == 7);
+    REQUIRE(cpu_scheduler.get_current_time() == 9);
 }

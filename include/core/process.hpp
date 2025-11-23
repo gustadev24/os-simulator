@@ -20,6 +20,7 @@ namespace OSSimulator {
 enum class ProcessState {
   NEW,       //!< Proceso recién creado.
   READY,     //!< Proceso listo para ejecutarse.
+    MEMORY_WAITING, //!< Proceso bloqueado esperando carga de páginas.
   RUNNING,   //!< Proceso en ejecución.
   WAITING,   //!< Proceso en espera.
   TERMINATED //!< Proceso terminado.
@@ -30,6 +31,7 @@ enum class ProcessState {
  * Esta estructura contiene toda la información relevante sobre un proceso,
  * incluyendo sus tiempos de llegada, ráfaga, métricas de rendimiento, estado
  * actual, y componentes de threading para la simulación concurrente.
+ *
  */
 struct Process {
   int pid;             //!< Identificador único del proceso.

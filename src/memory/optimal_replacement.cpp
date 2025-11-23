@@ -18,6 +18,12 @@ int OptimalReplacement::select_victim(const std::vector<Frame>& frames,
             auto& proc = *it->second;
             int next_use = std::numeric_limits<int>::max();
             
+            if (frame.page_id >= 0 && frame.page_id < static_cast<int>(proc.page_table.size())) {
+                if (proc.page_table[frame.page_id].referenced) {
+                    continue;
+                }
+            }
+
             // Search in trace
             for (size_t i = proc.current_access_index; i < proc.memory_access_trace.size(); ++i) {
                 if (proc.memory_access_trace[i] == frame.page_id) {
@@ -32,7 +38,7 @@ int OptimalReplacement::select_victim(const std::vector<Frame>& frames,
             }
         }
     }
-    return victim != -1 ? victim : 0;
+    return victim;
 }
 
 }

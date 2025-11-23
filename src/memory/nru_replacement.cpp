@@ -16,8 +16,10 @@ int NRUReplacement::select_victim(const std::vector<Frame>& frames,
         auto it = process_map.find(frame.process_id);
         if (it != process_map.end()) {
             const Page& page = it->second->page_table[frame.page_id];
+            if (page.referenced) {
+                continue;
+            }
             int class_idx = 0;
-            if (page.referenced) class_idx += 2;
             if (page.modified) class_idx += 1;
             classes[class_idx].push_back(frame.frame_id);
         }
@@ -32,7 +34,7 @@ int NRUReplacement::select_victim(const std::vector<Frame>& frames,
             return classes[i][dis(gen)];
         }
     }
-    return 0;
+    return -1;
 }
 
 }

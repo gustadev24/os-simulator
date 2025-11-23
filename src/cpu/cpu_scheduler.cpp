@@ -3,7 +3,6 @@
 #include "io/io_manager.hpp"
 #include "io/io_request.hpp"
 #include <chrono>
-#include <iostream>
 
 namespace OSSimulator {
 
@@ -20,6 +19,15 @@ CPUScheduler::~CPUScheduler() {
 
 void CPUScheduler::set_scheduler(std::unique_ptr<Scheduler> sched) {
   scheduler = std::move(sched);
+}
+
+void CPUScheduler::set_memory_manager(std::shared_ptr<MemoryManager> mm) {
+        std::lock_guard<std::mutex> lock(scheduler_mutex);
+        memory_manager = mm;
+        if (memory_manager) {
+                memory_manager->set_ready_callback(
+                        [this](std::shared_ptr<Process> proc) { this->handle_memory_ready(proc); });
+        }
 }
 
 void CPUScheduler::set_memory_callback(MemoryCheckCallback callback) {
@@ -92,6 +100,7 @@ void CPUScheduler::execute_step(int quantum) {
     if (!scheduler->has_processes()) {
         if (has_pending_processes()) {
             int idle_start = current_time;
+            advance_memory_manager(1, idle_start, scheduler_lock);
             advance_io_devices(1, idle_start, scheduler_lock);
             current_time++;
         }
@@ -101,6 +110,7 @@ void CPUScheduler::execute_step(int quantum) {
     auto next = scheduler->get_next_process();
     while (next &&
            (next->state == ProcessState::WAITING ||
+            next->state == ProcessState::MEMORY_WAITING ||
             next->state == ProcessState::TERMINATED)) {
         scheduler->remove_process(next->pid);
         next = scheduler->has_processes() ? scheduler->get_next_process() : nullptr;
@@ -121,20 +131,19 @@ void CPUScheduler::execute_step(int quantum) {
     running_process = next;
 
     if (memory_manager) {
-        int page_id = running_process->get_next_page_access();
-        if (page_id != -1) {
-             if (!memory_manager->request_page(*running_process, page_id, false, current_time)) {
-                 memory_manager->handle_page_fault(*running_process, page_id, current_time);
-                 scheduler->add_process(running_process);
-                 running_process = nullptr;
-                 return;
-             }
-             running_process->advance_page_access();
+        if (!memory_manager->prepare_process_for_cpu(running_process, current_time)) {
+            running_process->state = ProcessState::MEMORY_WAITING;
+            scheduler->remove_process(running_process->pid);
+            running_process = nullptr;
+            return;
         }
     }
 
     auto *current_burst = running_process->get_current_burst_mutable();
     if (current_burst && current_burst->type == BurstType::IO && io_manager) {
+        if (memory_manager) {
+            memory_manager->mark_process_inactive(*running_process);
+        }
         running_process->state = ProcessState::WAITING;
         scheduler->remove_process(running_process->pid);
 
@@ -152,6 +161,7 @@ void CPUScheduler::execute_step(int quantum) {
     int time_executed = running_process->execute(quantum, current_time);
     current_time += time_executed;
 
+    advance_memory_manager(time_executed, step_start_time, scheduler_lock);
     advance_io_devices(time_executed, step_start_time, scheduler_lock);
 
     if (running_process->is_completed()) {
@@ -164,10 +174,39 @@ void CPUScheduler::execute_step(int quantum) {
 
         scheduler->remove_process(running_process->pid);
 
+        if (memory_manager) {
+            memory_manager->mark_process_inactive(*running_process);
+            memory_manager->release_process_memory(running_process->pid);
+        }
+
+        pending_preemption = false;
         running_process = nullptr;
-    } else if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
-        scheduler->remove_process(running_process->pid);
-        scheduler->add_process(running_process);
+    } else {
+        if (pending_preemption &&
+            (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN ||
+             scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY)) {
+            pending_preemption = false;
+            if (memory_manager) {
+                memory_manager->mark_process_inactive(*running_process);
+            }
+            running_process->state = ProcessState::READY;
+            scheduler->remove_process(running_process->pid);
+            scheduler->add_process(running_process);
+            running_process = nullptr;
+            return;
+        }
+
+        if (pending_preemption) {
+            pending_preemption = false;
+        }
+
+        if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
+            if (memory_manager) {
+                memory_manager->mark_process_inactive(*running_process);
+            }
+            scheduler->remove_process(running_process->pid);
+            scheduler->add_process(running_process);
+        }
     }
 }
 
@@ -175,10 +214,12 @@ void CPUScheduler::run_until_completion() {
   simulation_running = true;
   while (simulation_running && (has_pending_processes() || scheduler->has_processes())) {
     int quantum = 0;
-    if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
-      if (auto *rr = dynamic_cast<RoundRobinScheduler *>(scheduler.get()))
-        quantum = rr->get_quantum();
-    }
+        if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
+            if (auto *rr = dynamic_cast<RoundRobinScheduler *>(scheduler.get()))
+                quantum = rr->get_quantum();
+        } else if (scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY) {
+                quantum = 1;
+        }
     execute_step(quantum);
   }
 }
@@ -256,7 +297,6 @@ void CPUScheduler::wait_for_process_step(std::shared_ptr<Process> proc) {
         [&proc]() { return proc->step_complete.load(); });
 
     if (!step_done) {
-        std::cout << "[ERROR] [SCHEDULER] Timeout esperando el paso del proceso " << proc->pid << ". Terminando hilo.\n";
         proc->should_terminate = true;
         proc->state_cv.notify_all();
         return;
@@ -290,8 +330,32 @@ void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
         completed_processes.push_back(proc);
     } else {
         proc->state = ProcessState::READY;
-        if (scheduler) scheduler->add_process(proc);
+        if (scheduler) {
+            scheduler->add_process(proc);
+            request_preemption_if_needed(proc);
+        }
     }
+}
+
+void CPUScheduler::handle_memory_ready(std::shared_ptr<Process> proc) {
+    if (!proc) return;
+
+    std::lock_guard<std::mutex> lock(scheduler_mutex);
+    if (!scheduler || proc->state == ProcessState::TERMINATED) return;
+
+    proc->state = ProcessState::READY;
+    scheduler->remove_process(proc->pid);
+    scheduler->add_process(proc);
+    request_preemption_if_needed(proc);
+}
+
+void CPUScheduler::advance_memory_manager(int time_slice, int step_start_time,
+                                          std::unique_lock<std::mutex> &lock) {
+    if (!memory_manager || time_slice <= 0) return;
+
+    lock.unlock();
+    memory_manager->advance_fault_queue(time_slice, step_start_time);
+    lock.lock();
 }
 
 void CPUScheduler::advance_io_devices(int time_slice, int step_start_time,
@@ -301,6 +365,28 @@ void CPUScheduler::advance_io_devices(int time_slice, int step_start_time,
     lock.unlock();
     io_manager->execute_all_devices(time_slice, step_start_time);
     lock.lock();
+}
+
+void CPUScheduler::request_preemption_if_needed(std::shared_ptr<Process> proc) {
+    if (!scheduler || !proc || !running_process) return;
+
+    switch (scheduler->get_algorithm()) {
+    case SchedulingAlgorithm::ROUND_ROBIN:
+        pending_preemption = true;
+        break;
+    case SchedulingAlgorithm::PRIORITY:
+        if (should_preempt_priority(proc)) {
+            pending_preemption = true;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+bool CPUScheduler::should_preempt_priority(std::shared_ptr<Process> candidate) const {
+    if (!candidate || !running_process) return false;
+    return candidate->priority < running_process->priority;
 }
 
 void CPUScheduler::terminate_all_threads() {

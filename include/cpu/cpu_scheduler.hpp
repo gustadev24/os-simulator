@@ -45,6 +45,7 @@ private:
 
   std::shared_ptr<MemoryManager> memory_manager;
     std::shared_ptr<IOManager> io_manager;
+  bool pending_preemption = false;
 
   /**
    * Crea y lanza un hilo para el proceso dado.
@@ -75,6 +76,11 @@ private:
     void handle_io_completion(std::shared_ptr<Process> proc, int completion_time);
     void advance_io_devices(int time_slice, int step_start_time,
                                                     std::unique_lock<std::mutex> &lock);
+    void handle_memory_ready(std::shared_ptr<Process> proc);
+    void advance_memory_manager(int time_slice, int step_start_time,
+                                std::unique_lock<std::mutex> &lock);
+    void request_preemption_if_needed(std::shared_ptr<Process> proc);
+    bool should_preempt_priority(std::shared_ptr<Process> candidate) const;
 
 public:
   /**
@@ -95,7 +101,7 @@ public:
    */
   void set_scheduler(std::unique_ptr<Scheduler> sched);
 
-  void set_memory_manager(std::shared_ptr<MemoryManager> mm) { memory_manager = mm; }
+  void set_memory_manager(std::shared_ptr<MemoryManager> mm);
 
     void set_io_manager(std::shared_ptr<IOManager> manager);
 

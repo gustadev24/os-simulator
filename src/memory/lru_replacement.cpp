@@ -16,13 +16,14 @@ int LRUReplacement::select_victim(const std::vector<Frame>& frames,
         auto it = process_map.find(frame.process_id);
         if (it != process_map.end()) {
             const Page& page = it->second->page_table[frame.page_id];
+            if (page.referenced) continue;
             if (page.last_access_time < min_time) {
                 min_time = page.last_access_time;
                 victim = frame.frame_id;
             }
         }
     }
-    return victim != -1 ? victim : 0;
+    return victim;
 }
 
 }
