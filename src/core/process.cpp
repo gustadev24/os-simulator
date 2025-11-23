@@ -197,20 +197,18 @@ void Process::thread_function() {
   while (!should_terminate.load()) {
     std::unique_lock<std::mutex> lock(process_mutex);
 
+    // Wait for RUNNING state and for previous step to be consumed
     state_cv.wait(lock, [this]() {
-      return state.load() == ProcessState::RUNNING || should_terminate.load();
+      return (state.load() == ProcessState::RUNNING && !step_complete.load()) || should_terminate.load();
     });
 
     if (should_terminate.load()) break;
 
+    // Minimal yield to simulate context switching without significant delay
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     step_complete.store(true);
     state_cv.notify_all();
-
-    state_cv.wait(lock, [this]() {
-      return state.load() != ProcessState::RUNNING || should_terminate.load();
-    });
   }
 }
 

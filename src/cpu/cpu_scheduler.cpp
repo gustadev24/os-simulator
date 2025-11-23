@@ -3,6 +3,7 @@
 #include "io/io_manager.hpp"
 #include "io/io_request.hpp"
 #include <chrono>
+#include <iostream>
 
 namespace OSSimulator {
 
@@ -189,7 +190,11 @@ void CPUScheduler::execute_step(int quantum) {
             if (memory_manager) {
                 memory_manager->mark_process_inactive(*running_process);
             }
-            running_process->state = ProcessState::READY;
+            {
+                std::lock_guard<std::mutex> lock(running_process->process_mutex);
+                running_process->state = ProcessState::READY;
+                running_process->state_cv.notify_all();
+            }
             scheduler->remove_process(running_process->pid);
             scheduler->add_process(running_process);
             running_process = nullptr;
@@ -204,8 +209,19 @@ void CPUScheduler::execute_step(int quantum) {
             if (memory_manager) {
                 memory_manager->mark_process_inactive(*running_process);
             }
+            {
+                std::lock_guard<std::mutex> lock(running_process->process_mutex);
+                running_process->state = ProcessState::READY;
+                running_process->step_complete = false;
+                running_process->state_cv.notify_all();
+            }
             scheduler->remove_process(running_process->pid);
             scheduler->add_process(running_process);
+        } else {
+            std::lock_guard<std::mutex> lock(running_process->process_mutex);
+            running_process->state = ProcessState::READY;
+            running_process->step_complete = false;
+            running_process->state_cv.notify_all();
         }
     }
 }
@@ -297,16 +313,15 @@ void CPUScheduler::wait_for_process_step(std::shared_ptr<Process> proc) {
         [&proc]() { return proc->step_complete.load(); });
 
     if (!step_done) {
+        std::cout << "Warning: Process " << proc->pid
+                  << " did not complete step in time. Terminating thread."
+                  << std::endl;
         proc->should_terminate = true;
         proc->state_cv.notify_all();
         return;
     }
 
     proc->step_complete = false;
-    if (proc->state == ProcessState::RUNNING) {
-        proc->state = ProcessState::READY;
-        proc->state_cv.notify_all();
-    }
 }
 
 void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
