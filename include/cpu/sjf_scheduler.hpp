@@ -7,11 +7,12 @@
 namespace OSSimulator {
 
 /**
- * Clase que implementa el algoritmo de planificación Shortest Job First (SJF).
+ * Clase que implementa el algoritmo de planificación "Trabajo más corto primero" (SJF).
  */
 class SJFScheduler : public Scheduler {
 private:
-  std::vector<std::shared_ptr<Process>> ready_queue; //!< Cola de procesos listos.
+  std::vector<std::shared_ptr<Process>>
+      ready_queue; //!< Cola de procesos listos.
 
 public:
   void add_process(std::shared_ptr<Process> process) override;

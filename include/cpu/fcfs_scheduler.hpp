@@ -7,7 +7,7 @@
 namespace OSSimulator {
 
 /**
- * Clase que implementa el algoritmo de planificación First Come, First Served (FCFS).
+ * Clase que implementa el algoritmo de planificación FCFS.
  */
 class FCFSScheduler : public Scheduler {
 private:

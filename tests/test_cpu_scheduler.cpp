@@ -4,17 +4,31 @@
 #include "cpu/priority_scheduler.hpp"
 #include "cpu/round_robin_scheduler.hpp"
 #include "cpu/sjf_scheduler.hpp"
+#include "io/io_device.hpp"
+#include "io/io_fcfs_scheduler.hpp"
+#include "io/io_manager.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <iostream>
 
 using namespace OSSimulator;
 
-TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+namespace {
 
+std::shared_ptr<IOManager> build_test_io_manager() {
+  auto io_manager = std::make_shared<IOManager>();
+  auto disk = std::make_shared<IODevice>("disk");
+  disk->set_scheduler(std::make_unique<IOFCFSScheduler>());
+  io_manager->add_device("disk", disk);
+  return io_manager;
+}
+
+} // namespace
+
+TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   SECTION("Single process execution") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     cpu_scheduler.add_process(p1);
 
@@ -29,6 +43,9 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   }
 
   SECTION("Multiple processes - no waiting") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 4);
@@ -45,7 +62,9 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   }
 
   SECTION("Processes with different arrival times") {
-    std::cout << "=== TEST: Processes with different arrival times ===\n";
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 4);
     auto p2 = std::make_shared<Process>(2, "P2", 1, 3);
     auto p3 = std::make_shared<Process>(3, "P3", 2, 2);
@@ -64,10 +83,10 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
 }
 
 TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<SJFScheduler>());
-
   SECTION("Shortest job first order") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<SJFScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 8);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 4);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
@@ -86,6 +105,9 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
   }
 
   SECTION("Calculate metrics correctly") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<SJFScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 6);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 2);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 8);
@@ -109,11 +131,11 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
 
 TEST_CASE("CPU Scheduler - Round Robin Integration",
           "[cpu_scheduler][round_robin]") {
-  CPUScheduler cpu_scheduler;
-  auto rr = std::make_unique<RoundRobinScheduler>(2);
-  cpu_scheduler.set_scheduler(std::move(rr));
-
   SECTION("Simple round robin with quantum 2") {
+    CPUScheduler cpu_scheduler;
+    auto rr = std::make_unique<RoundRobinScheduler>(2);
+    cpu_scheduler.set_scheduler(std::move(rr));
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
@@ -128,6 +150,10 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
   }
 
   SECTION("Context switches occur") {
+    CPUScheduler cpu_scheduler;
+    auto rr = std::make_unique<RoundRobinScheduler>(2);
+    cpu_scheduler.set_scheduler(std::move(rr));
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 6);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 4);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
@@ -161,10 +187,10 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
 }
 
 TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
-
   SECTION("Higher priority executes first") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5, 3);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3, 1);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 4, 2);
@@ -183,6 +209,9 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
   }
 
   SECTION("Same priority - FCFS") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5, 2);
     auto p2 = std::make_shared<Process>(2, "P2", 1, 3, 2);
     auto p3 = std::make_shared<Process>(3, "P3", 2, 4, 2);
@@ -199,13 +228,42 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
     REQUIRE(completed[1]->pid == 2);
     REQUIRE(completed[2]->pid == 3);
   }
+
+  SECTION("IO completion preempts lower priority process") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
+
+    auto io_manager = build_test_io_manager();
+    cpu_scheduler.set_io_manager(io_manager);
+
+    auto high = std::make_shared<Process>(
+        1, "High", 0,
+        std::vector<Burst>{Burst(BurstType::CPU, 1),
+                           Burst(BurstType::IO, 1, "disk"),
+                           Burst(BurstType::CPU, 2)},
+        0);
+
+    auto low = std::make_shared<Process>(
+        2, "Low", 0, std::vector<Burst>{Burst(BurstType::CPU, 6)}, 5);
+
+    cpu_scheduler.add_process(high);
+    cpu_scheduler.add_process(low);
+
+    cpu_scheduler.run_until_completion();
+
+    const auto &completed = cpu_scheduler.get_completed_processes();
+    REQUIRE(completed.size() == 2);
+    REQUIRE(completed[0]->pid == 1);
+    REQUIRE(completed[1]->pid == 2);
+    REQUIRE(completed[0]->completion_time < completed[1]->completion_time);
+  }
 }
 
 TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
-
   SECTION("Average waiting time") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
     auto p3 = std::make_shared<Process>(3, "P3", 0, 2);
@@ -221,6 +279,9 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   }
 
   SECTION("Average turnaround time") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
@@ -234,6 +295,9 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   }
 
   SECTION("Average response time") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 5);
     auto p2 = std::make_shared<Process>(2, "P2", 0, 3);
 
@@ -248,10 +312,10 @@ TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
 }
 
 TEST_CASE("CPU Scheduler - Process States", "[cpu_scheduler][states]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
-
   SECTION("Process transitions through states") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 3);
     cpu_scheduler.add_process(p1);
 
@@ -284,10 +348,10 @@ TEST_CASE("CPU Scheduler - Reset Functionality", "[cpu_scheduler][reset]") {
 }
 
 TEST_CASE("CPU Scheduler - Arrival Time Handling", "[cpu_scheduler][arrival]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
-
   SECTION("Late arriving processes") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     auto p1 = std::make_shared<Process>(1, "P1", 0, 2);
     auto p2 = std::make_shared<Process>(2, "P2", 5, 3);
     auto p3 = std::make_shared<Process>(3, "P3", 10, 2);
@@ -339,10 +403,10 @@ TEST_CASE("CPU Scheduler - Context Switch Counting",
 }
 
 TEST_CASE("CPU Scheduler - Memory Callback", "[cpu_scheduler][memory]") {
-  CPUScheduler cpu_scheduler;
-  cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
-
   SECTION("Memory callback integration") {
+    CPUScheduler cpu_scheduler;
+    cpu_scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+
     bool callback_called = false;
 
     cpu_scheduler.set_memory_callback([&callback_called](const Process &) {

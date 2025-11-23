@@ -7,7 +7,7 @@ using namespace OSSimulator;
 
 TEST_CASE("FCFS Scheduler - Basic Operations", "[fcfs]") {
   FCFSScheduler scheduler;
-  std::vector<std::shared_ptr<Process>> processes; // Store processes to keep them alive
+  std::vector<std::shared_ptr<Process>> processes;
 
   SECTION("Empty scheduler") {
     REQUIRE_FALSE(scheduler.has_processes());

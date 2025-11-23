@@ -7,10 +7,10 @@
 namespace OSSimulator {
 
 enum class SchedulingAlgorithm {
-  FCFS,        //!< First Come, First Served
-  SJF,         //!< Shortest Job First
-  ROUND_ROBIN, //!< Round Robin
-  PRIORITY     //!< Priority
+  FCFS,        //!< Primero en llegar, primero en ser atendido (FCFS)
+  SJF,         //!< Trabajo más corto primero (SJF)
+  ROUND_ROBIN, //!< Round Robin (quantum rotativo)
+  PRIORITY     //!< Planificación por prioridad
 };
 
 /**

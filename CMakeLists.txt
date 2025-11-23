@@ -69,6 +69,7 @@ if(BUILD_TESTS)
         ${PROJECT_SOURCE_DIR}/src/cpu/*.cpp
         ${PROJECT_SOURCE_DIR}/src/io/*.cpp
         ${PROJECT_SOURCE_DIR}/src/metrics/*.cpp
+        ${PROJECT_SOURCE_DIR}/src/memory/*.cpp
     )
   list(REMOVE_ITEM IMPL_SOURCES ${PROJECT_SOURCE_DIR}/src/main.cpp)
 
