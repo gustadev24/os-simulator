@@ -17,7 +17,7 @@ private:
 
 public:
   /**
-   * Constructor por defecto.
+   * Constructor con parámetro opcional.
    *
    * @param q Quantum de tiempo (por defecto 4).
    */
