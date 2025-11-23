@@ -10,6 +10,7 @@
 
 namespace OSSimulator {
 
+class MetricsCollector;
 /**
  * Clase que representa un dispositivo de entrada/salida.
  */
@@ -29,6 +30,9 @@ private:
   using CompletionCallback = std::function<void(std::shared_ptr<Process>, int)>;
   CompletionCallback
       completion_callback; //!< Callback al completar una solicitud.
+
+  std::shared_ptr<MetricsCollector> metrics_collector;
+  bool last_event_was_completed;
 
 public:
   /**
@@ -52,6 +56,7 @@ public:
    * @param callback Función a llamar cuando se complete una solicitud.
    */
   void set_completion_callback(CompletionCallback callback);
+  void set_metrics_collector(std::shared_ptr<MetricsCollector> collector);
 
   /**
    * Agrega una solicitud de E/S a la cola del dispositivo.
@@ -117,6 +122,7 @@ public:
    */
   size_t get_queue_size() const;
 
+  void send_log_metrics(int current_time);
   /**
    * Reinicia las estadísticas del dispositivo.
    */

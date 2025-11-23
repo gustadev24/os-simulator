@@ -2,6 +2,7 @@
 #define IO_MANAGER_HPP
 
 #include "io/io_device.hpp"
+#include "metrics/metrics_collector.hpp"
 #include <functional>
 #include <map>
 #include <memory>
@@ -22,6 +23,8 @@ private:
   using CompletionCallback = std::function<void(std::shared_ptr<Process>, int)>;
   CompletionCallback
       completion_callback; //!< Callback al completar una solicitud.
+
+  std::shared_ptr<MetricsCollector> metrics_collector;
 
 public:
   IOManager() = default;
@@ -73,6 +76,7 @@ public:
    */
   void execute_all_devices(int quantum, int current_time);
 
+  void set_metrics_collector(std::shared_ptr<MetricsCollector> collector);
   /**
    * Verifica si hay operaciones de E/S pendientes en algún dispositivo.
    *

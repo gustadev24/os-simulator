@@ -11,6 +11,9 @@ void IOManager::add_device(const std::string &name,
   if (completion_callback) {
     device->set_completion_callback(completion_callback);
   }
+  if (metrics_collector) {
+    device->set_metrics_collector(metrics_collector);
+  }
 }
 
 std::shared_ptr<IODevice> IOManager::get_device(const std::string &name) {
@@ -33,6 +36,15 @@ void IOManager::set_completion_callback(CompletionCallback callback) {
 
   for (auto &[name, device] : devices) {
     device->set_completion_callback(callback);
+  }
+}
+
+void IOManager::set_metrics_collector(std::shared_ptr<MetricsCollector> collector) {
+  std::lock_guard<std::mutex> lock(manager_mutex);
+  metrics_collector = collector;
+  
+  for (auto &[name, device] : devices) {
+    device->set_metrics_collector(collector);
   }
 }
 
@@ -62,6 +74,7 @@ void IOManager::execute_all_devices(int quantum, int current_time) {
     if (device->has_pending_requests()) {
       device->execute_step(quantum, current_time);
     }
+    device->send_log_metrics(current_time);
   }
 }
 
