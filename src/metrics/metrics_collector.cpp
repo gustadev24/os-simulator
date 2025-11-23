@@ -1,8 +1,5 @@
 #include "metrics/metrics_collector.hpp"
-#include <algorithm>
 #include <iostream>
-#include <sstream>
-#include <vector>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -45,9 +42,9 @@ void MetricsCollector::enable_stdout_output() {
 }
 
 void MetricsCollector::disable_output() {
-  flush_all();
-  
   std::lock_guard<std::mutex> lock(output_mutex);
+  
+  flush_all();
   if (file_out && file_out->is_open()) {
     file_out->close();
   }

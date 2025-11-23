@@ -2,16 +2,12 @@
 #define METRICS_COLLECTOR_HPP
 
 #include <fstream>
-#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 
 namespace OSSimulator {
-
-class Process;
-class IODevice;
 
 class MetricsCollector {
 public:
