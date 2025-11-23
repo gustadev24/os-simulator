@@ -23,6 +23,7 @@
             with pkgs;
             [
               gcc
+              gdb
               cmake
               just
               graphviz
