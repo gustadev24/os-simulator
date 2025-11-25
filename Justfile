@@ -1,3 +1,5 @@
+set shell := ["bash", "-cu"]
+
 build:
   cmake -S . -B build
   cmake --build build
@@ -12,7 +14,7 @@ demo-io:
   g++ -std=c++17 -o build/bin/demo_io examples/demo_io.cpp src/core/process.cpp src/io/io_device.cpp src/io/io_manager.cpp -I./include -pthread
   ./build/bin/demo_io
 
-clean: 
+clean:
   rm -rf build
 
 build-docs:
