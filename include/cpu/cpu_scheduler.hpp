@@ -4,6 +4,7 @@
 #include "core/process.hpp"
 #include "cpu/scheduler.hpp"
 #include "memory/memory_manager.hpp"
+#include "metrics/metrics_collector.hpp"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -45,8 +46,12 @@ private:
 
   std::shared_ptr<MemoryManager> memory_manager; //!< Gestor de memoria.
   std::shared_ptr<IOManager> io_manager;         //!< Gestor de E/S.
+  std::shared_ptr<MetricsCollector>
+      metrics_collector; //!< Recolector de métricas.
   bool pending_preemption =
-      false; //!< Indica si se debe preemptar el proceso actual.
+      false;              //!< Indica si se debe preemptar el proceso actual.
+  int total_cpu_time = 0; //!< Tiempo total de CPU utilizado.
+  bool last_tick_was_idle = false; //!< Indica si el último tick fue idle.
 
   /**
    * Crea y lanza un hilo para el proceso dado.
@@ -158,6 +163,13 @@ public:
   void set_io_manager(std::shared_ptr<IOManager> manager);
 
   /**
+   * Establece el recolector de métricas a utilizar.
+   *
+   * @param collector Puntero al recolector de métricas.
+   */
+  void set_metrics_collector(std::shared_ptr<MetricsCollector> collector);
+
+  /**
    * Establece la función de verificación de memoria.
    *
    * @param callback Función de verificación de memoria.
@@ -260,9 +272,41 @@ public:
   double get_average_response_time() const;
 
   /**
+   * Calcula la utilización de CPU.
+   *
+   * @return Porcentaje de utilización de CPU (0.0 - 100.0).
+   */
+  double get_cpu_utilization() const;
+
+  /**
+   * Obtiene el nombre del algoritmo de planificación actual.
+   *
+   * @return Nombre del algoritmo.
+   */
+  std::string get_algorithm_name() const;
+
+  /**
+   * Obtiene el número de procesos en la cola de listos.
+   *
+   * @return Tamaño de la cola de listos.
+   */
+  size_t get_ready_queue_size() const;
+
+  /**
    * Reinicia el estado del planificador y de los procesos.
    */
   void reset();
+
+private:
+  /**
+   * Envía las métricas del tick actual al recolector.
+   *
+   * @param event Evento a registrar.
+   * @param proc Proceso involucrado (puede ser nullptr).
+   * @param context_switch Si hubo cambio de contexto.
+   */
+  void send_cpu_metrics(const std::string &event, std::shared_ptr<Process> proc,
+                        bool context_switch);
 };
 
 } // namespace OSSimulator

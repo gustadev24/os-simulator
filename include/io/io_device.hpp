@@ -3,6 +3,7 @@
 
 #include "io/io_request.hpp"
 #include "io/io_scheduler.hpp"
+#include "metrics/metrics_collector.hpp"
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -10,7 +11,6 @@
 
 namespace OSSimulator {
 
-class MetricsCollector;
 /**
  * Clase que representa un dispositivo de entrada/salida.
  */

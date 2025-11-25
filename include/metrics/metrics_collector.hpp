@@ -11,11 +11,7 @@ namespace OSSimulator {
 
 class MetricsCollector {
 public:
-  enum class OutputMode {
-    DISABLED,
-    FILE,
-    STDOUT
-  };
+  enum class OutputMode { DISABLED, FILE, STDOUT };
 
 private:
   mutable std::mutex output_mutex;
@@ -32,12 +28,12 @@ private:
   };
 
   struct IoTickData {
-      std::string device;
-      std::string event;
-      int pid = -1;
-      std::string name;
-      int remaining = 0;
-      size_t queue_size = 0;
+    std::string device;
+    std::string event;
+    int pid = -1;
+    std::string name;
+    int remaining = 0;
+    size_t queue_size = 0;
   };
 
   struct TickData {
@@ -61,28 +57,24 @@ public:
   void enable_stdout_output();
   void disable_output();
   bool is_enabled() const { return mode != OutputMode::DISABLED; }
-  
+
   void flush_all();
 
-  void log_cpu(
-      int tick,
-      const std::string &event,
-      int pid,
-      const std::string &name,
-      int remaining,
-      size_t ready_queue_size,
-      bool context_switch_occurred);
-  
-  void log_io(
-      int tick,
-      const std::string &device_name,
-      const std::string &event,
-      int pid,
-      const std::string &name,
-      int remaining,
-      size_t queue_size);
+  void log_cpu(int tick, const std::string &event, int pid,
+               const std::string &name, int remaining, size_t ready_queue_size,
+               bool context_switch_occurred);
+
+  void log_io(int tick, const std::string &device_name,
+              const std::string &event, int pid, const std::string &name,
+              int remaining, size_t queue_size);
+
+  // Aggregated metrics methods
+  void log_cpu_summary(int total_time, double cpu_utilization,
+                       double avg_waiting_time, double avg_turnaround_time,
+                       double avg_response_time, int context_switches,
+                       const std::string &algorithm);
 };
 
-}
+} // namespace OSSimulator
 
 #endif
