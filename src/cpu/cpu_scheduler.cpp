@@ -10,7 +10,8 @@ namespace OSSimulator {
 CPUScheduler::CPUScheduler()
     : scheduler(nullptr), current_time(0), running_process(nullptr),
       context_switches(0), memory_check_callback(nullptr),
-      simulation_running(false) {
+      simulation_running(false), metrics_collector(nullptr), total_cpu_time(0),
+      last_tick_was_idle(false) {
   // all_processes.reserve(100);
 }
 
@@ -43,6 +44,12 @@ void CPUScheduler::set_io_manager(std::shared_ptr<IOManager> manager) {
           handle_io_completion(proc, completion_time);
         });
   }
+}
+
+void CPUScheduler::set_metrics_collector(
+    std::shared_ptr<MetricsCollector> collector) {
+  std::lock_guard<std::mutex> lock(scheduler_mutex);
+  metrics_collector = collector;
 }
 
 void CPUScheduler::add_process(std::shared_ptr<Process> process) {
@@ -104,6 +111,11 @@ void CPUScheduler::execute_step(int quantum) {
       int idle_start = current_time;
       advance_memory_manager(1, idle_start, scheduler_lock);
       advance_io_devices(1, idle_start, scheduler_lock);
+
+      // Log CPU idle state
+      send_cpu_metrics("IDLE", nullptr, false);
+      last_tick_was_idle = true;
+
       current_time++;
     }
     return;
@@ -126,8 +138,11 @@ void CPUScheduler::execute_step(int quantum) {
     return;
   }
 
-  if (!running_process || running_process->pid != next->pid)
+  bool context_switch_occurred = false;
+  if (!running_process || running_process->pid != next->pid) {
     context_switches++;
+    context_switch_occurred = true;
+  }
 
   running_process = next;
 
@@ -162,12 +177,50 @@ void CPUScheduler::execute_step(int quantum) {
 
   int step_start_time = current_time;
   int time_executed = running_process->execute(quantum, current_time);
+
+  // Track CPU time
+  total_cpu_time += time_executed;
+
+  // Check if process will complete after this execution
+  bool will_complete = running_process->is_completed();
+
+  // Determine if this will be a preemption (for RR or Priority when process not complete)
+  bool will_preempt = false;
+  if (!will_complete) {
+    if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
+      will_preempt = true;
+    } else if (scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY) {
+      // Check if a higher-priority process is in the ready queue
+      auto ready_queue = scheduler->get_ready_queue();
+      if (!ready_queue.empty()) {
+        // Assume lower value means higher priority
+        int running_priority = running_process->get_priority();
+        for (const auto& proc : ready_queue) {
+          if (proc->get_priority() < running_priority) {
+            will_preempt = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Log CPU execution metrics BEFORE incrementing time
+  if (will_complete) {
+    send_cpu_metrics("COMPLETE", running_process, context_switch_occurred);
+  } else if (will_preempt) {
+    send_cpu_metrics("PREEMPT", running_process, context_switch_occurred);
+  } else {
+    send_cpu_metrics("EXEC", running_process, context_switch_occurred);
+  }
+  last_tick_was_idle = false;
+
   current_time += time_executed;
 
   advance_memory_manager(time_executed, step_start_time, scheduler_lock);
   advance_io_devices(time_executed, step_start_time, scheduler_lock);
 
-  if (running_process->is_completed()) {
+  if (will_complete) {
     running_process->calculate_metrics();
     running_process->stop_thread();
 
@@ -199,6 +252,7 @@ void CPUScheduler::execute_step(int quantum) {
       }
       scheduler->remove_process(running_process->pid);
       scheduler->add_process(running_process);
+
       running_process = nullptr;
       return;
     }
@@ -298,6 +352,8 @@ void CPUScheduler::reset() {
   current_time = 0;
   context_switches = 0;
   running_process = nullptr;
+  total_cpu_time = 0;
+  last_tick_was_idle = false;
   if (scheduler)
     scheduler->clear();
 }
@@ -433,6 +489,67 @@ void CPUScheduler::terminate_all_threads() {
     } catch (...) {
     }
   }
+}
+
+double CPUScheduler::get_cpu_utilization() const {
+  if (current_time == 0) {
+    return 0.0;
+  }
+  return (static_cast<double>(total_cpu_time) / current_time) * 100.0;
+}
+
+std::string CPUScheduler::get_algorithm_name() const {
+  if (!scheduler) {
+    return "NONE";
+  }
+
+  switch (scheduler->get_algorithm()) {
+  case SchedulingAlgorithm::FCFS:
+    return "FCFS";
+  case SchedulingAlgorithm::SJF:
+    return "SJF";
+  case SchedulingAlgorithm::ROUND_ROBIN:
+    return "ROUND_ROBIN";
+  case SchedulingAlgorithm::PRIORITY:
+    return "PRIORITY";
+  default:
+    return "UNKNOWN";
+  }
+}
+
+size_t CPUScheduler::get_ready_queue_size() const {
+  if (!scheduler) {
+    return 0;
+  }
+  return scheduler->size();
+}
+
+void CPUScheduler::send_cpu_metrics(const std::string &event,
+                                    std::shared_ptr<Process> proc,
+                                    bool context_switch) {
+  if (!metrics_collector || !metrics_collector->is_enabled()) {
+    return;
+  }
+
+  int pid = -1;
+  std::string name;
+  int remaining = 0;
+
+  if (proc) {
+    pid = proc->pid;
+    name = proc->name;
+
+    // Get remaining time from current burst
+    auto *current_burst = proc->get_current_burst_mutable();
+    if (current_burst && current_burst->type == BurstType::CPU) {
+      remaining = current_burst->remaining_time;
+    }
+  }
+
+  size_t ready_queue_size = get_ready_queue_size();
+
+  metrics_collector->log_cpu(current_time, event, pid, name, remaining,
+                             ready_queue_size, context_switch);
 }
 
 } // namespace OSSimulator
