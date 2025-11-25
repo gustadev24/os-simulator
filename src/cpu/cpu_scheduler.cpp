@@ -184,11 +184,25 @@ void CPUScheduler::execute_step(int quantum) {
   // Check if process will complete after this execution
   bool will_complete = running_process->is_completed();
 
-  // Determine if this will be a preemption (for RR when process not complete)
+  // Determine if this will be a preemption (for RR or Priority when process not complete)
   bool will_preempt = false;
-  if (!will_complete &&
-      scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
-    will_preempt = true;
+  if (!will_complete) {
+    if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
+      will_preempt = true;
+    } else if (scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY) {
+      // Check if a higher-priority process is in the ready queue
+      auto ready_queue = scheduler->get_ready_queue();
+      if (!ready_queue.empty()) {
+        // Assume lower value means higher priority
+        int running_priority = running_process->get_priority();
+        for (const auto& proc : ready_queue) {
+          if (proc->get_priority() < running_priority) {
+            will_preempt = true;
+            break;
+          }
+        }
+      }
+    }
   }
 
   // Log CPU execution metrics BEFORE incrementing time
