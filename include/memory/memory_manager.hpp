@@ -23,7 +23,8 @@ public:
   using ProcessReadyCallback = std::function<void(std::shared_ptr<Process>)>;
 
   /**
-   * Constructor.
+   * Constructor parametrizado.
+   *
    * @param total_frames Número total de marcos físicos.
    * @param algo Algoritmo de reemplazo a utilizar.
    * @param page_fault_latency Latencia (en ticks) para cargar una página.
@@ -33,53 +34,76 @@ public:
 
   /**
    * Registra un proceso para gestión de memoria.
+   *
+   * @param process Proceso a registrar.
    */
   void register_process(std::shared_ptr<Process> process);
 
   /**
    * Elimina el registro de un proceso.
+    *
+    * @param pid ID del proceso a desregistrar.
    */
   void unregister_process(int pid);
 
   /**
    * Establece el callback que se llamará cuando un proceso quede listo tras cargar páginas.
+   *
+    * @param callback Función a invocar.
    */
   void set_ready_callback(ProcessReadyCallback callback);
 
   /**
    * Intenta asignar memoria inicial al proceso.
+    *
+    * @param process Proceso al que asignar memoria.
    * @return true si la asignación inicial fue posible.
    */
   bool allocate_initial_memory(Process &process);
 
   /**
-   * Prepara un proceso para ser ejecutado en CPU (resuelve faltas de página pendientes).
+   * Prepara un proceso para ser ejecutado en CPU.
+   *
+    * @param process Proceso a preparar.
+   * @param current_time Tiempo actual de la simulación.
+   * @return true si el proceso está listo para CPU, false si hay faltas de página pendientes.
    */
   bool prepare_process_for_cpu(std::shared_ptr<Process> process,
                                int current_time);
 
   /**
    * Avanza la cola de fallos de página en el tiempo.
+   *
+    * @param duration Duración del avance en ticks.
+    * @param start_time Tiempo de inicio para el avance.
    */
   void advance_fault_queue(int duration, int start_time);
 
   /**
    * Marca un proceso como inactivo respecto a la memoria.
+    *
+      * @param process Proceso a marcar como inactivo.
    */
   void mark_process_inactive(const Process &process);
 
   /**
    * Libera la memoria asociada a un proceso.
+    *
+    * @param pid ID del proceso cuya memoria se liberará.
    */
   void release_process_memory(int pid);
 
   /**
    * Obtiene el número total de fallos de página ocurridos.
+   *
+    * @return Número total de fallos de página.
    */
   int get_total_page_faults() const;
 
   /**
    * Obtiene el número total de reemplazos de páginas realizados.
+    *
+      * @return Número total de reemplazos.
    */
   int get_total_replacements() const;
 
@@ -119,6 +143,7 @@ private:
 
   /**
    * Busca un marco físico libre.
+   *
    * @return Índice del marco libre, o -1 si no hay ninguno.
    */
   int find_free_frame();

@@ -190,18 +190,8 @@ void CPUScheduler::execute_step(int quantum) {
     if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
       will_preempt = true;
     } else if (scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY) {
-      // Check if a higher-priority process is in the ready queue
-      auto ready_queue = scheduler->get_ready_queue();
-      if (!ready_queue.empty()) {
-        // Assume lower value means higher priority
-        int running_priority = running_process->get_priority();
-        for (const auto& proc : ready_queue) {
-          if (proc->get_priority() < running_priority) {
-            will_preempt = true;
-            break;
-          }
-        }
-      }
+      // For priority scheduling, check if pending_preemption was set
+      will_preempt = pending_preemption;
     }
   }
 

@@ -1,6 +1,5 @@
 #include "memory/optimal_replacement.hpp"
 #include "core/process.hpp"
-#include <limits>
 
 namespace OSSimulator {
 
@@ -8,40 +7,66 @@ int OptimalReplacement::select_victim(
     const std::vector<Frame> &frames,
     const std::unordered_map<int, std::shared_ptr<Process>> &process_map,
     int /*current_time*/) {
-  int victim = -1;
-  int max_next_use = -1;
+
+  int victim_terminated = -1;
+  int victim_io_waiting = -1;
+  int longest_io_time = -1;
+  int victim_unblocked = -1;
 
   for (const auto &frame : frames) {
     if (!frame.occupied)
       continue;
 
     auto it = process_map.find(frame.process_id);
-    if (it != process_map.end()) {
-      auto &proc = *it->second;
-      int next_use = std::numeric_limits<int>::max();
 
-      if (frame.page_id >= 0 &&
-          frame.page_id < static_cast<int>(proc.page_table.size())) {
-        if (proc.page_table[frame.page_id].referenced) {
-          continue;
-        }
-      }
+    if (it == process_map.end()) {
+      return frame.frame_id;
+    }
 
-      for (size_t i = proc.current_access_index;
-           i < proc.memory_access_trace.size(); ++i) {
-        if (proc.memory_access_trace[i] == frame.page_id) {
-          next_use = static_cast<int>(i);
-          break;
-        }
-      }
+    auto &proc = *it->second;
 
-      if (next_use > max_next_use) {
-        max_next_use = next_use;
-        victim = frame.frame_id;
+    if (frame.page_id >= 0 &&
+        frame.page_id < static_cast<int>(proc.page_table.size())) {
+      if (proc.page_table[frame.page_id].referenced) {
+        continue;
       }
     }
+
+    ProcessState state = proc.state.load();
+
+    if (state == ProcessState::TERMINATED) {
+      if (victim_terminated == -1) {
+        victim_terminated = frame.frame_id;
+      }
+      continue;
+    }
+
+    if (state == ProcessState::WAITING) {
+      int remaining_io = 0;
+      const Burst *current_burst = proc.get_current_burst();
+      if (current_burst && current_burst->type == BurstType::IO) {
+        remaining_io = current_burst->remaining_time;
+      }
+
+      if (remaining_io > longest_io_time) {
+        longest_io_time = remaining_io;
+        victim_io_waiting = frame.frame_id;
+      }
+      continue;
+    }
+
+    if (victim_unblocked == -1) {
+      victim_unblocked = frame.frame_id;
+    }
   }
-  return victim;
+
+  if (victim_terminated != -1) {
+    return victim_terminated;
+  }
+  if (victim_io_waiting != -1) {
+    return victim_io_waiting;
+  }
+  return victim_unblocked;
 }
 
 } // namespace OSSimulator

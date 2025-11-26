@@ -455,6 +455,7 @@ TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
     REQUIRE(metrics.is_enabled());
     
     // Log something
+    // TODO: great job at polluting test output :+1:
     metrics.log_cpu(0, "EXEC", 1, "P1", 10, 0, false);
     metrics.flush_all();
     

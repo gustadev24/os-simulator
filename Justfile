@@ -1,8 +1,12 @@
 set shell := ["bash", "-cu"]
 
+[unix]
 build:
-    cmake -S . -B build
-    cmake --build build
+    ./scripts/build.sh
+
+[windows]
+build:
+    ./scripts/build.ps1
 
 test: build
     ./build/bin/tests
