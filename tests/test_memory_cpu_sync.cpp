@@ -40,7 +40,6 @@ TEST_CASE("Full system integration - single process", "[integration]") {
                          Burst(BurstType::IO, 2, "disk"),
                          Burst(BurstType::CPU, 1)},
       1, 2);
-  process->memory_access_trace = {0, 1};
 
   cpu_scheduler.load_processes({process});
   cpu_scheduler.run_until_completion();
@@ -70,7 +69,6 @@ TEST_CASE("Full system integration - multiple processes", "[integration]") {
                          Burst(BurstType::IO, 2, "disk"),
                          Burst(BurstType::CPU, 1)},
       1, 2);
-  process1->memory_access_trace = {0, 1};
 
   auto process2 = std::make_shared<Process>(
       2, "P2", 1,
@@ -78,7 +76,6 @@ TEST_CASE("Full system integration - multiple processes", "[integration]") {
                          Burst(BurstType::IO, 1, "disk"),
                          Burst(BurstType::CPU, 2)},
       2, 3);
-  process2->memory_access_trace = {2};
 
   cpu_scheduler.load_processes({process1, process2});
   cpu_scheduler.run_until_completion();
