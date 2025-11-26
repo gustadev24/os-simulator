@@ -24,6 +24,7 @@
             [
               gcc
               gdb
+              ninja
               cmake
               just
               graphviz

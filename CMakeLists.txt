@@ -42,7 +42,7 @@ FetchContent_MakeAvailable(json)
 target_link_libraries(os_simulator PRIVATE nlohmann_json::nlohmann_json)
 
 add_custom_command(
-    TARGET os_simulator PRE_BUILD
+    TARGET os_simulator POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${PROJECT_SOURCE_DIR}/data/procesos
             ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/data/procesos
