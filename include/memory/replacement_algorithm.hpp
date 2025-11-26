@@ -45,14 +45,14 @@ public:
      * 
      * @param frame_id ID del marco accedido.
      */
-  virtual void on_page_access(int frame_id) {}
+  virtual void on_page_access(int /*frame_id*/) {}
 
   /**
      * Notifica al algoritmo que un marco ha sido liberado.
      * 
      * @param frame_id ID del marco liberado.
      */
-  virtual void on_frame_release(int frame_id) {}
+  virtual void on_frame_release(int /*frame_id*/) {}
 };
 
 } // namespace OSSimulator

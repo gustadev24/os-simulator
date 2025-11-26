@@ -24,6 +24,7 @@ struct Page {
 
   /**
    * Constructor parametrizado.
+   *
    * @param id Identificador de la página.
    */
   Page(int id)
