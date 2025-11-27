@@ -1,6 +1,8 @@
 #include "memory/memory_manager.hpp"
 #include "core/process.hpp"
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 namespace OSSimulator {
 
@@ -326,6 +328,90 @@ void MemoryManager::set_process_pages_referenced(const Process &process,
       page.referenced = referenced;
     }
   }
+}
+
+std::string MemoryManager::generate_json_output() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  
+  std::string json = "{\n";
+  json += "  \"memory_manager\": {\n";
+  json += "    \"total_frames\": " + std::to_string(total_frames) + ",\n";
+  json += "    \"total_page_faults\": " + std::to_string(total_page_faults) + ",\n";
+  json += "    \"total_replacements\": " + std::to_string(total_replacements) + ",\n";
+  json += "    \"page_fault_latency\": " + std::to_string(page_fault_latency) + ",\n";
+  json += "    \"active_processes\": " + std::to_string(process_map.size()) + ",\n";
+  json += "    \"processes_waiting_on_memory\": " + std::to_string(processes_waiting_on_memory.size()) + ",\n";
+  json += "    \"pending_loads\": " + std::to_string(fault_queue.size()) + ",\n";
+  
+  // Frame state
+  json += "    \"frames\": [\n";
+  int free_frames = 0;
+  for (size_t i = 0; i < frames.size(); ++i) {
+    if (i > 0) json += ",\n";
+    const Frame &f = frames[i];
+    json += "      {\n";
+    json += "        \"frame_id\": " + std::to_string(f.frame_id) + ",\n";
+    json += "        \"occupied\": " + std::string(f.occupied ? "true" : "false") + ",\n";
+    json += "        \"process_id\": " + std::to_string(f.process_id) + ",\n";
+    json += "        \"page_id\": " + std::to_string(f.page_id) + "\n";
+    json += "      }";
+    if (!f.occupied) free_frames++;
+  }
+  json += "\n    ],\n";
+  json += "    \"free_frames\": " + std::to_string(free_frames) + ",\n";
+  
+  // Page tables by process
+  json += "    \"page_tables\": [\n";
+  bool first_proc = true;
+  for (const auto &[pid, proc_ptr] : process_map) {
+    if (!first_proc) json += ",\n";
+    first_proc = false;
+    
+    const Process &proc = *proc_ptr;
+    json += "      {\n";
+    json += "        \"pid\": " + std::to_string(proc.pid) + ",\n";
+    json += "        \"process_name\": \"" + proc.name + "\",\n";
+    json += "        \"page_faults\": " + std::to_string(proc.page_faults) + ",\n";
+    json += "        \"replacements\": " + std::to_string(proc.replacements) + ",\n";
+    json += "        \"memory_required\": " + std::to_string(proc.memory_required) + ",\n";
+    json += "        \"pages\": [\n";
+    
+    for (size_t i = 0; i < proc.page_table.size(); ++i) {
+      if (i > 0) json += ",\n";
+      const Page &page = proc.page_table[i];
+      json += "          {\n";
+      json += "            \"page_id\": " + std::to_string(page.page_id) + ",\n";
+      json += "            \"valid\": " + std::string(page.valid ? "true" : "false") + ",\n";
+      json += "            \"frame_number\": " + std::to_string(page.frame_number) + ",\n";
+      json += "            \"referenced\": " + std::string(page.referenced ? "true" : "false") + ",\n";
+      json += "            \"modified\": " + std::string(page.modified ? "true" : "false") + ",\n";
+      json += "            \"last_access_time\": " + std::to_string(page.last_access_time) + "\n";
+      json += "          }";
+    }
+    
+    json += "\n        ]\n";
+    json += "      }";
+  }
+  json += "\n    ]\n";
+  json += "  }\n";
+  json += "}";
+  
+  return json;
+}
+
+bool MemoryManager::save_json_to_file(const std::string &filename) {
+  std::string json_output = generate_json_output();
+  
+  std::ofstream file(filename);
+  if (!file.is_open()) {
+    std::cerr << "[MemoryManager] Error: Could not open file '" << filename << "' for writing.\n";
+    return false;
+  }
+  
+  file << json_output;
+  file.close();
+  
+  return true;
 }
 
 } // namespace OSSimulator

@@ -98,6 +98,21 @@ public:
     std::lock_guard<std::mutex> lock(manager_mutex);
     return devices;
   }
+
+  /**
+   * Genera una salida JSON estructurada con el estado del planificador de E/S.
+   *
+   * @return String JSON con las estadísticas y estado de todos los dispositivos.
+   */
+  std::string generate_json_output() const;
+
+  /**
+   * Guarda el estado del planificador de E/S en un archivo JSON.
+   *
+   * @param filename Nombre del archivo donde guardar el JSON.
+   * @return true si se guardó correctamente, false en caso contrario.
+   */
+  bool save_json_to_file(const std::string &filename) const;
 };
 
 } // namespace OSSimulator

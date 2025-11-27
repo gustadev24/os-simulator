@@ -127,6 +127,13 @@ public:
    * Reinicia las estadísticas del dispositivo.
    */
   void reset();
+
+  /**
+   * Genera una salida JSON con el estado actual del dispositivo.
+   *
+   * @return String JSON con el estado y estadísticas del dispositivo.
+   */
+  std::string get_device_status_json() const;
 };
 
 } // namespace OSSimulator

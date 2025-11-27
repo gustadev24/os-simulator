@@ -1,5 +1,7 @@
 #include "io/io_manager.hpp"
 #include <iostream>
+#include <sstream>
+#include <fstream>
 
 namespace OSSimulator {
 
@@ -96,6 +98,64 @@ void IOManager::reset_all_devices() {
   for (auto &[name, device] : devices) {
     device->reset();
   }
+}
+
+std::string IOManager::generate_json_output() const {
+  std::lock_guard<std::mutex> lock(manager_mutex);
+  
+  std::string json = "{\n";
+  json += "  \"io_scheduler\": {\n";
+  json += "    \"total_devices\": " + std::to_string(devices.size()) + ",\n";
+  
+  // Check for pending I/O directly without calling has_pending_io() to avoid deadlock
+  bool pending = false;
+  for (const auto &[name, device] : devices) {
+    if (device->has_pending_requests()) {
+      pending = true;
+      break;
+    }
+  }
+  json += "    \"has_pending_io\": " + std::string(pending ? "true" : "false") + ",\n";
+  json += "    \"devices\": [\n";
+  
+  bool first = true;
+  for (const auto &[name, device] : devices) {
+    if (!first) json += ",\n";
+    first = false;
+    
+    std::string device_json = device->get_device_status_json();
+    std::string indented;
+    std::istringstream stream(device_json);
+    std::string line;
+    bool first_line = true;
+    while (std::getline(stream, line)) {
+      if (!first_line) indented += "\n";
+      indented += "      " + line;
+      first_line = false;
+    }
+    json += indented;
+  }
+  
+  json += "\n    ]\n";
+  json += "  }\n";
+  json += "}";
+  
+  return json;
+}
+
+bool IOManager::save_json_to_file(const std::string &filename) const {
+  std::string json_output = generate_json_output();
+  
+  std::ofstream file(filename);
+  if (!file.is_open()) {
+    std::cerr << "[IOManager] Error: Could not open file '" << filename << "' for writing.\n";
+    return false;
+  }
+  
+  file << json_output;
+  file.close();
+  
+  return true;
 }
 
 } // namespace OSSimulator

@@ -107,6 +107,21 @@ public:
    */
   int get_total_replacements() const;
 
+  /**
+   * Genera una salida JSON estructurada con el estado de la memoria.
+   *
+   * @return String JSON con las tablas de páginas, estado de marcos y estadísticas.
+   */
+  std::string generate_json_output();
+
+  /**
+   * Guarda el estado de la memoria en un archivo JSON.
+   *
+   * @param filename Nombre del archivo donde guardar el JSON.
+   * @return true si se guardó correctamente, false en caso contrario.
+   */
+  bool save_json_to_file(const std::string &filename);
+
 private:
   int total_frames; //!< Número de marcos físicos.
   std::unique_ptr<ReplacementAlgorithm>

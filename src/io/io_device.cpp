@@ -146,6 +146,53 @@ void IODevice::send_log_metrics(int current_time) {
   last_event_was_completed = false;
 }
 
+std::string IODevice::get_device_status_json() const {
+  std::lock_guard<std::mutex> lock(device_mutex);
+  
+  std::string json = "{\n";
+  json += "  \"device_name\": \"" + device_name + "\",\n";
+  json += "  \"is_busy\": " + std::string(current_request ? "true" : "false") + ",\n";
+  json += "  \"queue_size\": " + std::to_string(scheduler ? scheduler->size() : 0) + ",\n";
+  json += "  \"total_io_time\": " + std::to_string(total_io_time) + ",\n";
+  json += "  \"device_switches\": " + std::to_string(device_switches) + ",\n";
+  json += "  \"total_requests_completed\": " + std::to_string(total_requests_completed) + ",\n";
+  
+  if (scheduler) {
+    std::string algo_name;
+    switch (scheduler->get_algorithm()) {
+      case IOSchedulingAlgorithm::FCFS:
+        algo_name = "FCFS";
+        break;
+      case IOSchedulingAlgorithm::SJF:
+        algo_name = "SJF";
+        break;
+      case IOSchedulingAlgorithm::ROUND_ROBIN:
+        algo_name = "ROUND_ROBIN";
+        break;
+      case IOSchedulingAlgorithm::PRIORITY:
+        algo_name = "PRIORITY";
+        break;
+      default:
+        algo_name = "UNKNOWN";
+    }
+    json += "  \"algorithm\": \"" + algo_name + "\",\n";
+  }
+  
+  json += "  \"current_request\": ";
+  if (current_request && current_request->process) {
+    json += "{\n";
+    json += "    \"pid\": " + std::to_string(current_request->process->pid) + ",\n";
+    json += "    \"process_name\": \"" + current_request->process->name + "\",\n";
+    json += "    \"remaining_time\": " + std::to_string(current_request->burst.remaining_time) + ",\n";
+    json += "    \"device\": \"" + current_request->burst.io_device + "\"\n";
+    json += "  }\n";
+  } else {
+    json += "null\n";
+  }
+  
+  json += "}";
+  return json;
+}
 
 
 } // namespace OSSimulator
