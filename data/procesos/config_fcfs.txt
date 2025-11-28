@@ -1,0 +1,6 @@
+# Configuración para FCFS
+total_memory_frames=32
+frame_size=4096
+scheduling_algorithm=FCFS
+page_replacement_algorithm=FIFO
+quantum=4

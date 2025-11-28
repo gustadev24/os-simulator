@@ -1,9 +1,11 @@
+#include "core/config_parser.hpp"
 #include "core/process.hpp"
 #include "cpu/cpu_scheduler.hpp"
 #include "cpu/fcfs_scheduler.hpp"
 #include "cpu/priority_scheduler.hpp"
 #include "cpu/round_robin_scheduler.hpp"
 #include "cpu/sjf_scheduler.hpp"
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -122,20 +124,103 @@ void demo_priority() {
   print_results(scheduler);
 }
 
-/**
- * @param test wawa
-*/
-int main() {
+void demo_from_file(const std::string &process_file,
+                    const std::string &config_file) {
+  print_header("Simulación desde archivo");
+
+  try {
+    auto config = ConfigParser::load_simulator_config(config_file);
+    auto processes = ConfigParser::load_processes_from_file(process_file);
+
+    if (processes.empty()) {
+      std::cerr << "No se cargaron procesos." << std::endl;
+      return;
+    }
+
+    std::cout << "\nConfiguración del simulador:\n";
+    std::cout << "  Marcos de memoria: " << config.total_memory_frames << "\n";
+    std::cout << "  Tamaño de marco: " << config.frame_size << " bytes\n";
+    std::cout << "  Algoritmo de planificación: " << config.scheduling_algorithm
+              << "\n";
+    std::cout << "  Algoritmo de reemplazo: "
+              << config.page_replacement_algorithm << "\n";
+    std::cout << "  Quantum: " << config.quantum << "\n\n";
+
+    CPUScheduler scheduler;
+
+    if (config.scheduling_algorithm == "FCFS") {
+      scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
+    } else if (config.scheduling_algorithm == "SJF") {
+      scheduler.set_scheduler(std::make_unique<SJFScheduler>());
+    } else if (config.scheduling_algorithm == "RoundRobin") {
+      scheduler.set_scheduler(
+          std::make_unique<RoundRobinScheduler>(config.quantum));
+    } else if (config.scheduling_algorithm == "Priority") {
+      scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
+    } else {
+      std::cerr << "Algoritmo de planificación no reconocido: "
+                << config.scheduling_algorithm << std::endl;
+      return;
+    }
+
+    scheduler.load_processes(processes);
+    scheduler.run_until_completion();
+
+    print_results(scheduler);
+
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+}
+
+void print_usage(const char *program_name) {
+  std::cout << "Uso: " << program_name << " [opciones]\n\n";
+  std::cout << "Opciones:\n";
+  std::cout << "  -f <archivo_procesos>  Cargar procesos desde archivo\n";
+  std::cout << "  -c <archivo_config>    Cargar configuración desde archivo\n";
+  std::cout << "  -h, --help             Mostrar esta ayuda\n\n";
+  std::cout << "Si no se especifican archivos, se ejecuta la demostración por "
+               "defecto.\n\n";
+  std::cout << "Ejemplo:\n";
+  std::cout << "  " << program_name
+            << " -f data/procesos/procesos.txt -c data/procesos/config.txt\n";
+}
+
+int main(int argc, char *argv[]) {
+  std::string process_file;
+  std::string config_file;
+
+  for (int i = 1; i < argc; i++) {
+    if (std::strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+      process_file = argv[++i];
+    } else if (std::strcmp(argv[i], "-c") == 0 && i + 1 < argc) {
+      config_file = argv[++i];
+    } else if (std::strcmp(argv[i], "-h") == 0 ||
+               std::strcmp(argv[i], "--help") == 0) {
+      print_usage(argv[0]);
+      return 0;
+    }
+  }
+
   std::cout << "\n";
   std::cout << "====================================================\n";
   std::cout << "|   CPU Scheduling Algorithms Demonstration        |\n";
   std::cout << "|   Operating System Simulator                     |\n";
   std::cout << "====================================================\n";
 
-  demo_fcfs();
-  demo_sjf();
-  demo_round_robin();
-  demo_priority();
+  if (!process_file.empty() && !config_file.empty()) {
+    demo_from_file(process_file, config_file);
+  } else if (!process_file.empty() || !config_file.empty()) {
+    std::cerr << "\nError: Se deben especificar ambos archivos (-f y -c) o "
+                 "ninguno.\n";
+    print_usage(argv[0]);
+    return 1;
+  } else {
+    demo_fcfs();
+    demo_sjf();
+    demo_round_robin();
+    demo_priority();
+  }
 
   std::cout << "\n========================================\n";
   std::cout << "  Demonstration Complete\n";

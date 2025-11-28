@@ -1,0 +1,8 @@
+# Ejemplo de procesos con diferentes patrones de ráfagas
+# Caso de prueba extendido con múltiples procesos y ráfagas alternadas
+
+P1 0 CPU(5),E/S(4),CPU(3),E/S(2),CPU(4) 1 8
+P2 1 CPU(8),E/S(3),CPU(6) 2 6
+P3 2 CPU(12) 1 10
+P4 3 CPU(4),E/S(5),CPU(4),E/S(3),CPU(5) 3 7
+P5 5 CPU(7),E/S(2),CPU(9) 2 9
