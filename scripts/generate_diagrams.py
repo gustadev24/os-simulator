@@ -1,0 +1,666 @@
+#!/usr/bin/env python3
+"""
+Sistema de Visualización de Métricas del Simulador de SO
+Genera diagramas completos basados en los datos JSONL recopilados.
+"""
+
+import json
+import os
+import shutil
+from pathlib import Path
+from typing import List, Dict, Any
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.patches import Rectangle
+import numpy as np
+from collections import defaultdict
+
+class MetricsVisualizer:
+    def __init__(self, metrics_file: str, output_dir: str):
+        self.metrics_file = metrics_file
+        self.output_dir = Path(output_dir)
+        self.metrics = []
+        self.processes = set()
+        
+        # Color scheme for processes
+        self.process_colors = {
+            'P1': '#FF6B6B',  # Red
+            'P2': '#4ECDC4',  # Teal
+            'P3': '#45B7D1',  # Blue
+            'P4': '#FFA07A',  # Light Salmon
+            'P5': '#98D8C8',  # Mint
+        }
+        
+        self.state_colors = {
+            'RUNNING': '#2ECC71',      # Green
+            'READY': '#3498DB',        # Blue
+            'WAITING': '#E74C3C',      # Red
+            'MEMORY_WAITING': '#F39C12',  # Orange
+            'TERMINATED': '#95A5A6',   # Gray
+            'NEW': '#9B59B6'           # Purple
+        }
+        
+    def load_metrics(self):
+        """Carga las métricas desde el archivo JSONL"""
+        with open(self.metrics_file, 'r') as f:
+            self.metrics = [json.loads(line) for line in f if line.strip()]
+        
+        # Identificar todos los procesos
+        for event in self.metrics:
+            if 'cpu' in event and event['cpu'].get('pid', -1) > 0:
+                self.processes.add(event['cpu']['name'])
+            if 'state_transitions' in event:
+                for trans in event['state_transitions']:
+                    self.processes.add(trans['name'])
+        
+        self.processes = sorted(list(self.processes))
+        print(f"[INFO] Loaded {len(self.metrics)} events")
+        print(f"[INFO] Found processes: {', '.join(self.processes)}")
+    
+    def clear_output_dir(self):
+        """Limpia el directorio de salida"""
+        if self.output_dir.exists():
+            shutil.rmtree(self.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[INFO] Output directory created: {self.output_dir}")
+    
+    def generate_gantt_chart(self):
+        """Diagrama de Gantt mostrando la ejecución de procesos"""
+        print("[INFO] Generating Gantt chart...")
+        
+        fig, ax = plt.subplots(figsize=(16, 6))
+        
+        # Recopilar información de ejecución
+        process_timeline = defaultdict(list)
+        
+        for event in self.metrics:
+            tick = event.get('tick', -1)
+            
+            # CPU execution
+            if 'cpu' in event:
+                cpu = event['cpu']
+                pid = cpu.get('pid', -1)
+                name = cpu.get('name', '')
+                if pid > 0 and name:
+                    event_type = cpu.get('event')
+                    process_timeline[name].append({
+                        'tick': tick,
+                        'type': 'CPU',
+                        'event': event_type
+                    })
+            
+            # I/O operations
+            if 'io' in event:
+                io = event['io']
+                pid = io.get('pid', -1)
+                name = io.get('name', '')
+                if pid > 0 and name:
+                    event_type = io.get('event')
+                    process_timeline[name].append({
+                        'tick': tick,
+                        'type': 'IO',
+                        'event': event_type
+                    })
+        
+        # Draw Gantt bars
+        y_pos = 0
+        yticks = []
+        yticklabels = []
+        
+        for proc_name in self.processes:
+            events = sorted(process_timeline[proc_name], key=lambda x: x['tick'])
+            
+            current_state = None
+            start_tick = None
+            
+            for i, evt in enumerate(events):
+                if start_tick is None:
+                    start_tick = evt['tick']
+                    current_state = evt['type']
+                
+                # Check if state changes or it's the last event
+                is_last = (i == len(events) - 1)
+                next_different = (not is_last and events[i+1]['type'] != current_state)
+                
+                if next_different or is_last:
+                    end_tick = evt['tick'] if not is_last else evt['tick'] + 1
+                    duration = end_tick - start_tick
+                    
+                    if duration > 0:
+                        color = self.process_colors.get(proc_name, '#95A5A6')
+                        alpha = 0.9 if current_state == 'CPU' else 0.5
+                        hatch = None if current_state == 'CPU' else '//'
+                        
+                        ax.barh(y_pos, duration, left=start_tick, height=0.6,
+                               color=color, alpha=alpha, hatch=hatch,
+                               edgecolor='black', linewidth=0.5)
+                    
+                    if not is_last:
+                        start_tick = events[i+1]['tick']
+                        current_state = events[i+1]['type']
+            
+            yticks.append(y_pos)
+            yticklabels.append(proc_name)
+            y_pos += 1
+        
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Processes', fontsize=12, fontweight='bold')
+        ax.set_title('Process Execution Gantt Chart', fontsize=14, fontweight='bold')
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        
+        # Legend
+        cpu_patch = mpatches.Patch(color='gray', alpha=0.9, label='CPU Execution')
+        io_patch = mpatches.Patch(color='gray', alpha=0.5, hatch='//', label='I/O Operation')
+        ax.legend(handles=[cpu_patch, io_patch], loc='upper right')
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '01_gantt_chart.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Gantt chart saved")
+    
+    def generate_queue_evolution(self):
+        """Evolución de las colas del sistema"""
+        print("[INFO] Generating queue evolution...")
+        
+        ticks = []
+        ready_counts = []
+        blocked_memory_counts = []
+        blocked_io_counts = []
+        
+        for event in self.metrics:
+            if 'queues' in event:
+                tick = event.get('tick', -1)
+                queues = event['queues']
+                
+                ticks.append(tick)
+                ready_counts.append(len(queues.get('ready', [])))
+                blocked_memory_counts.append(len(queues.get('blocked_memory', [])))
+                blocked_io_counts.append(len(queues.get('blocked_io', [])))
+        
+        fig, ax = plt.subplots(figsize=(14, 6))
+        
+        ax.plot(ticks, ready_counts, marker='o', label='Ready Queue', 
+               color='#3498DB', linewidth=2, markersize=4)
+        ax.plot(ticks, blocked_memory_counts, marker='s', label='Blocked (Memory)', 
+               color='#F39C12', linewidth=2, markersize=4)
+        ax.plot(ticks, blocked_io_counts, marker='^', label='Blocked (I/O)', 
+               color='#E74C3C', linewidth=2, markersize=4)
+        
+        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Queue Size', fontsize=12, fontweight='bold')
+        ax.set_title('Process Queue Evolution Over Time', fontsize=14, fontweight='bold')
+        ax.legend(loc='upper right', fontsize=10)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '02_queue_evolution.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Queue evolution saved")
+    
+    def generate_state_diagram(self):
+        """Diagrama de estados de los procesos"""
+        print("[INFO] Generating process state timeline...")
+        
+        fig, ax = plt.subplots(figsize=(16, 8))
+        
+        # Track state for each process
+        process_states = {proc: [] for proc in self.processes}
+        
+        for event in self.metrics:
+            tick = event.get('tick', -1)
+            if 'state_transitions' in event:
+                for trans in event['state_transitions']:
+                    name = trans['name']
+                    to_state = trans['to']
+                    if name in process_states:
+                        process_states[name].append({
+                            'tick': tick,
+                            'state': to_state
+                        })
+        
+        # Draw state timeline for each process
+        y_pos = 0
+        yticks = []
+        yticklabels = []
+        
+        for proc_name in self.processes:
+            states = sorted(process_states[proc_name], key=lambda x: x['tick'])
+            
+            for i, state_info in enumerate(states):
+                start = state_info['tick']
+                end = states[i+1]['tick'] if i < len(states)-1 else start + 1
+                duration = end - start
+                
+                if duration > 0:
+                    color = self.state_colors.get(state_info['state'], '#95A5A6')
+                    ax.barh(y_pos, duration, left=start, height=0.7,
+                           color=color, edgecolor='black', linewidth=0.5)
+            
+            yticks.append(y_pos)
+            yticklabels.append(proc_name)
+            y_pos += 1
+        
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Processes', fontsize=12, fontweight='bold')
+        ax.set_title('Process State Timeline', fontsize=14, fontweight='bold')
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        
+        # Legend
+        legend_patches = [mpatches.Patch(color=color, label=state) 
+                         for state, color in self.state_colors.items()]
+        ax.legend(handles=legend_patches, loc='center left', bbox_to_anchor=(1, 0.5))
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '03_state_timeline.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ State timeline saved")
+    
+    def generate_memory_usage(self):
+        """Uso de memoria a lo largo del tiempo"""
+        print("[INFO] Generating memory usage visualization...")
+        
+        ticks = []
+        used_frames = []
+        page_faults = []
+        
+        for event in self.metrics:
+            tick = event.get('tick', -1)
+            
+            if 'frame_status' in event:
+                frames = event['frame_status']
+                occupied = sum(1 for f in frames if f.get('occupied', False))
+                ticks.append(tick)
+                used_frames.append(occupied)
+            
+            if 'memory' in event:
+                mem = event['memory']
+                total_faults = mem.get('total_page_faults', 0)
+                if total_faults > 0:
+                    page_faults.append({'tick': tick, 'total': total_faults})
+        
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+        
+        # Memory frame usage
+        if ticks:
+            ax1.fill_between(ticks, 0, used_frames, alpha=0.4, color='#3498DB')
+            ax1.plot(ticks, used_frames, color='#2C3E50', linewidth=2)
+            ax1.set_ylabel('Frames Used', fontsize=12, fontweight='bold')
+            ax1.set_title('Memory Frame Usage Over Time', fontsize=14, fontweight='bold')
+            ax1.grid(True, alpha=0.3)
+            ax1.set_xlim(left=0)
+        
+        # Page faults accumulation
+        if page_faults:
+            fault_ticks = [pf['tick'] for pf in page_faults]
+            fault_totals = [pf['total'] for pf in page_faults]
+            ax2.step(fault_ticks, fault_totals, where='post', color='#E74C3C', linewidth=2)
+            ax2.fill_between(fault_ticks, 0, fault_totals, step='post', alpha=0.3, color='#E74C3C')
+            ax2.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+            ax2.set_ylabel('Total Page Faults', fontsize=12, fontweight='bold')
+            ax2.set_title('Cumulative Page Faults', fontsize=14, fontweight='bold')
+            ax2.grid(True, alpha=0.3)
+            ax2.set_xlim(left=0)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '04_memory_usage.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Memory usage saved")
+    
+    def generate_page_table_heatmap(self):
+        """Heatmap de tablas de páginas por proceso"""
+        print("[INFO] Generating page table heatmaps...")
+        
+        # Get last page table for each process
+        process_page_tables = {}
+        
+        for event in self.metrics:
+            if 'page_table' in event:
+                pt = event['page_table']
+                proc_name = pt.get('name')
+                if proc_name:
+                    process_page_tables[proc_name] = pt
+        
+        if not process_page_tables:
+            print("  ⚠ No page table data found")
+            return
+        
+        num_processes = len(process_page_tables)
+        fig, axes = plt.subplots(1, num_processes, figsize=(5*num_processes, 4))
+        
+        if num_processes == 1:
+            axes = [axes]
+        
+        for idx, (proc_name, pt) in enumerate(sorted(process_page_tables.items())):
+            pages = pt.get('pages', [])
+            
+            if not pages:
+                continue
+            
+            # Create matrix for visualization
+            num_pages = len(pages)
+            data = np.zeros((num_pages, 4))  # page, frame, valid, referenced
+            
+            for i, page in enumerate(pages):
+                data[i, 0] = page.get('page', -1)
+                data[i, 1] = page.get('frame', -1)
+                data[i, 2] = 1 if page.get('valid', False) else 0
+                data[i, 3] = 1 if page.get('referenced', False) else 0
+            
+            im = axes[idx].imshow(data.T, cmap='RdYlGn', aspect='auto', vmin=-1, vmax=15)
+            axes[idx].set_title(f'{proc_name} Page Table', fontweight='bold')
+            axes[idx].set_yticks([0, 1, 2, 3])
+            axes[idx].set_yticklabels(['Page', 'Frame', 'Valid', 'Ref'])
+            axes[idx].set_xticks(range(num_pages))
+            axes[idx].set_xlabel('Page Number')
+            
+            # Add text annotations
+            for i in range(num_pages):
+                for j in range(4):
+                    val = int(data[i, j])
+                    if j < 2:
+                        text = str(val) if val >= 0 else '-'
+                    else:
+                        text = 'Y' if val == 1 else 'N'
+                    axes[idx].text(i, j, text, ha='center', va='center',
+                                  color='black', fontsize=8, fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '05_page_tables.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Page tables saved")
+    
+    def generate_frame_allocation(self):
+        """Visualización de asignación de marcos de memoria"""
+        print("[INFO] Generating memory frame allocation...")
+        
+        # Get final frame status
+        final_frame_status = None
+        for event in reversed(self.metrics):
+            if 'frame_status' in event:
+                final_frame_status = event['frame_status']
+                break
+        
+        if not final_frame_status:
+            print("  ⚠ No frame status data found")
+            return
+        
+        # Count frames by process
+        frame_counts = defaultdict(int)
+        free_frames = 0
+        
+        for frame in final_frame_status:
+            if frame.get('occupied', False):
+                pid = frame.get('pid', -1)
+                proc_name = f"P{pid}"
+                frame_counts[proc_name] += 1
+            else:
+                free_frames += 1
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+        
+        # Pie chart
+        labels = list(frame_counts.keys()) + ['Free']
+        sizes = list(frame_counts.values()) + [free_frames]
+        colors = [self.process_colors.get(label, '#95A5A6') for label in labels[:-1]] + ['#ECF0F1']
+        
+        wedges, texts, autotexts = ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
+                                            colors=colors, startangle=90)
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+        
+        ax1.set_title('Memory Frame Distribution', fontsize=14, fontweight='bold')
+        
+        # Bar chart
+        processes = sorted(frame_counts.keys())
+        counts = [frame_counts[p] for p in processes]
+        bars = ax2.bar(processes, counts, color=[self.process_colors.get(p, '#95A5A6') for p in processes],
+                      edgecolor='black', linewidth=1.5)
+        
+        ax2.set_ylabel('Frames Allocated', fontsize=12, fontweight='bold')
+        ax2.set_title('Frames per Process', fontsize=14, fontweight='bold')
+        ax2.grid(axis='y', alpha=0.3)
+        
+        # Add value labels on bars
+        for bar in bars:
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{int(height)}',
+                    ha='center', va='bottom', fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '06_frame_allocation.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Frame allocation saved")
+    
+    def generate_io_operations(self):
+        """Visualización de operaciones de E/S"""
+        print("[INFO] Generating I/O operations visualization...")
+        
+        io_events = []
+        
+        for event in self.metrics:
+            tick = event.get('tick', -1)
+            if 'io' in event:
+                io = event['io']
+                if io.get('pid', -1) > 0:
+                    io_events.append({
+                        'tick': tick,
+                        'name': io.get('name'),
+                        'event': io.get('event'),
+                        'remaining': io.get('remaining', 0),
+                        'device': io.get('device', '')
+                    })
+        
+        if not io_events:
+            print("  ⚠ No I/O operations found")
+            return
+        
+        fig, ax = plt.subplots(figsize=(14, 6))
+        
+        # Group by process
+        process_io = defaultdict(list)
+        for io_evt in io_events:
+            process_io[io_evt['name']].append(io_evt)
+        
+        y_pos = 0
+        yticks = []
+        yticklabels = []
+        
+        for proc_name in sorted(process_io.keys()):
+            events = sorted(process_io[proc_name], key=lambda x: x['tick'])
+            
+            for evt in events:
+                tick = evt['tick']
+                ax.scatter(tick, y_pos, s=100, color=self.process_colors.get(proc_name, '#95A5A6'),
+                          edgecolors='black', linewidth=1.5, zorder=3)
+                ax.text(tick, y_pos + 0.15, f"R:{evt['remaining']}", 
+                       ha='center', va='bottom', fontsize=8)
+            
+            yticks.append(y_pos)
+            yticklabels.append(proc_name)
+            y_pos += 1
+        
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticklabels)
+        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Process', fontsize=12, fontweight='bold')
+        ax.set_title('I/O Operations Timeline', fontsize=14, fontweight='bold')
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '07_io_operations.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ I/O operations saved")
+    
+    def generate_context_switches(self):
+        """Visualización de cambios de contexto"""
+        print("[INFO] Generating context switches visualization...")
+        
+        context_switches = []
+        
+        for event in self.metrics:
+            tick = event.get('tick', -1)
+            if 'cpu' in event:
+                cpu = event['cpu']
+                if cpu.get('context_switch', False) and cpu.get('pid', -1) > 0:
+                    context_switches.append({
+                        'tick': tick,
+                        'process': cpu.get('name'),
+                        'event': cpu.get('event')
+                    })
+        
+        if not context_switches:
+            print("  ⚠ No context switches found")
+            return
+        
+        fig, ax = plt.subplots(figsize=(14, 6))
+        
+        ticks = [cs['tick'] for cs in context_switches]
+        processes = [cs['process'] for cs in context_switches]
+        
+        # Create color map for processes
+        unique_procs = sorted(set(processes))
+        proc_to_num = {p: i for i, p in enumerate(unique_procs)}
+        colors = [self.process_colors.get(p, '#95A5A6') for p in processes]
+        
+        ax.scatter(ticks, [proc_to_num[p] for p in processes], 
+                  c=colors, s=150, edgecolors='black', linewidth=1.5, zorder=3)
+        
+        # Connect with lines
+        ax.plot(ticks, [proc_to_num[p] for p in processes], 
+               color='gray', alpha=0.5, linewidth=1, linestyle='--', zorder=1)
+        
+        ax.set_yticks(range(len(unique_procs)))
+        ax.set_yticklabels(unique_procs)
+        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Process', fontsize=12, fontweight='bold')
+        ax.set_title(f'Context Switches (Total: {len(context_switches)})', 
+                    fontsize=14, fontweight='bold')
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / '08_context_switches.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Context switches saved")
+    
+    def generate_summary_dashboard(self):
+        """Dashboard resumen con métricas clave"""
+        print("[INFO] Generating summary dashboard...")
+        
+        # Extract summary metrics
+        total_ticks = max(e.get('tick', 0) for e in self.metrics)
+        total_context_switches = sum(1 for e in self.metrics 
+                                    if e.get('cpu', {}).get('context_switch', False))
+        
+        total_page_faults = 0
+        total_replacements = 0
+        for event in self.metrics:
+            if 'memory' in event:
+                total_page_faults = max(total_page_faults, 
+                                       event['memory'].get('total_page_faults', 0))
+                total_replacements = max(total_replacements,
+                                        event['memory'].get('total_replacements', 0))
+        
+        # Count states
+        state_counts = defaultdict(int)
+        for event in self.metrics:
+            if 'state_transitions' in event:
+                for trans in event['state_transitions']:
+                    state_counts[trans['to']] += 1
+        
+        fig = plt.figure(figsize=(16, 10))
+        gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
+        
+        # Title
+        fig.suptitle('Simulation Summary Dashboard', fontsize=16, fontweight='bold')
+        
+        # Metric boxes
+        metrics_data = [
+            ('Total Time', f'{total_ticks} ticks', '#3498DB'),
+            ('Context Switches', str(total_context_switches), '#E74C3C'),
+            ('Page Faults', str(total_page_faults), '#F39C12'),
+            ('Page Replacements', str(total_replacements), '#9B59B6'),
+            ('Processes', str(len(self.processes)), '#2ECC71'),
+        ]
+        
+        for idx, (label, value, color) in enumerate(metrics_data):
+            row, col = idx // 3, idx % 3
+            ax = fig.add_subplot(gs[row, col])
+            ax.text(0.5, 0.6, value, ha='center', va='center', 
+                   fontsize=32, fontweight='bold', color=color)
+            ax.text(0.5, 0.3, label, ha='center', va='center',
+                   fontsize=14, color='gray')
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.axis('off')
+            ax.add_patch(Rectangle((0.05, 0.1), 0.9, 0.8, fill=False, 
+                                  edgecolor=color, linewidth=3))
+        
+        # State transitions pie
+        if state_counts:
+            ax = fig.add_subplot(gs[1:, :])
+            labels = list(state_counts.keys())
+            sizes = list(state_counts.values())
+            colors = [self.state_colors.get(l, '#95A5A6') for l in labels]
+            
+            wedges, texts, autotexts = ax.pie(sizes, labels=labels, autopct='%1.1f%%',
+                                               colors=colors, startangle=90)
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontweight('bold')
+                autotext.set_fontsize(10)
+            
+            ax.set_title('State Transitions Distribution', fontsize=14, fontweight='bold')
+        
+        plt.savefig(self.output_dir / '09_summary_dashboard.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("  ✓ Summary dashboard saved")
+    
+    def generate_all(self):
+        """Genera todas las visualizaciones"""
+        print("\n" + "="*60)
+        print("  GENERATING VISUALIZATION DIAGRAMS")
+        print("="*60 + "\n")
+        
+        self.load_metrics()
+        self.clear_output_dir()
+        
+        self.generate_gantt_chart()
+        self.generate_queue_evolution()
+        self.generate_state_diagram()
+        self.generate_memory_usage()
+        self.generate_page_table_heatmap()
+        self.generate_frame_allocation()
+        self.generate_io_operations()
+        self.generate_context_switches()
+        self.generate_summary_dashboard()
+        
+        print("\n" + "="*60)
+        print(f"  ✓ All diagrams generated in: {self.output_dir}")
+        print("="*60 + "\n")
+
+
+def main():
+    import sys
+    
+    # Default paths
+    metrics_file = 'data/resultados/metrics.jsonl'
+    output_dir = 'data/diagramas'
+    
+    # Allow override from command line
+    if len(sys.argv) > 1:
+        metrics_file = sys.argv[1]
+    if len(sys.argv) > 2:
+        output_dir = sys.argv[2]
+    
+    visualizer = MetricsVisualizer(metrics_file, output_dir)
+    visualizer.generate_all()
+
+
+if __name__ == '__main__':
+    main()
