@@ -80,7 +80,7 @@ void MetricsCollector::flush_tick(int tick) {
     has_data = true;
 
     if (!data.has_cpu && !data.has_io && !data.has_memory &&
-        !data.has_state_transition) {
+        data.state_transitions.empty() && !data.has_queue_snapshot) {
       tick_buffer.erase(it);
       return;
     }
@@ -123,12 +123,23 @@ void MetricsCollector::flush_tick(int tick) {
                    {"total_replacements", data.memory.total_replacements}};
   }
 
-  if (data.has_state_transition) {
-    j["state_transition"] = {{"pid", data.state_transition.pid},
-                             {"name", data.state_transition.name},
-                             {"from", data.state_transition.from_state},
-                             {"to", data.state_transition.to_state},
-                             {"reason", data.state_transition.reason}};
+  if (!data.state_transitions.empty()) {
+    json transitions = json::array();
+    for (const auto &st : data.state_transitions) {
+      transitions.push_back({{"pid", st.pid},
+                             {"name", st.name},
+                             {"from", st.from_state},
+                             {"to", st.to_state},
+                             {"reason", st.reason}});
+    }
+    j["state_transitions"] = transitions;
+  }
+
+  if (data.has_queue_snapshot) {
+    j["queues"] = {{"ready", data.queue_snapshot.ready_queue},
+                   {"blocked_memory", data.queue_snapshot.blocked_memory_queue},
+                   {"blocked_io", data.queue_snapshot.blocked_io_queue},
+                   {"running", data.queue_snapshot.running_pid}};
   }
 
   write_line(j.dump());
@@ -225,12 +236,27 @@ void MetricsCollector::log_state_transition(int tick, int pid,
   std::lock_guard<std::mutex> lock(output_mutex);
 
   auto &t = tick_buffer[tick];
-  t.state_transition.pid = pid;
-  t.state_transition.name = name;
-  t.state_transition.from_state = process_state_to_string(from_state);
-  t.state_transition.to_state = process_state_to_string(to_state);
-  t.state_transition.reason = reason;
-  t.has_state_transition = true;
+  StateTransitionData st;
+  st.pid = pid;
+  st.name = name;
+  st.from_state = process_state_to_string(from_state);
+  st.to_state = process_state_to_string(to_state);
+  st.reason = reason;
+  t.state_transitions.push_back(st);
+}
+
+void MetricsCollector::log_queue_snapshot(
+    int tick, const std::vector<int> &ready_queue,
+    const std::vector<int> &blocked_memory_queue,
+    const std::vector<int> &blocked_io_queue, int running_pid) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  auto &t = tick_buffer[tick];
+  t.queue_snapshot.ready_queue = ready_queue;
+  t.queue_snapshot.blocked_memory_queue = blocked_memory_queue;
+  t.queue_snapshot.blocked_io_queue = blocked_io_queue;
+  t.queue_snapshot.running_pid = running_pid;
+  t.has_queue_snapshot = true;
 }
 
 void MetricsCollector::log_cpu_summary(int total_time, double cpu_utilization,

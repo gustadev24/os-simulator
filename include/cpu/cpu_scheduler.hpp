@@ -293,6 +293,34 @@ public:
   size_t get_ready_queue_size() const;
 
   /**
+   * Obtiene los PIDs de procesos en estado READY.
+   *
+   * @return Vector con PIDs en cola de listos.
+   */
+  std::vector<int> get_ready_queue_pids() const;
+
+  /**
+   * Obtiene los PIDs de procesos en estado MEMORY_WAITING.
+   *
+   * @return Vector con PIDs bloqueados por memoria.
+   */
+  std::vector<int> get_memory_waiting_pids() const;
+
+  /**
+   * Obtiene los PIDs de procesos en estado WAITING (bloqueados por I/O).
+   *
+   * @return Vector con PIDs bloqueados por I/O.
+   */
+  std::vector<int> get_io_waiting_pids() const;
+
+  /**
+   * Obtiene el PID del proceso en ejecución.
+   *
+   * @return PID del proceso corriendo, o -1 si no hay ninguno.
+   */
+  int get_running_pid() const;
+
+  /**
    * Reinicia el estado del planificador y de los procesos.
    */
   void reset();
@@ -307,6 +335,16 @@ private:
    */
   void send_cpu_metrics(const std::string &event, std::shared_ptr<Process> proc,
                         bool context_switch);
+
+  /**
+   * Envía un snapshot del estado de las colas al recolector.
+   */
+  void send_queue_snapshot();
+
+  /**
+   * Envía un snapshot del estado de las colas al recolector en un tick específico.
+   */
+  void send_queue_snapshot(int tick);
 };
 
 } // namespace OSSimulator

@@ -55,15 +55,23 @@ private:
     std::string reason;
   };
 
+  struct QueueSnapshotData {
+    std::vector<int> ready_queue;
+    std::vector<int> blocked_memory_queue;
+    std::vector<int> blocked_io_queue;
+    int running_pid = -1;
+  };
+
   struct TickData {
     CpuTickData cpu;
     IoTickData io;
     MemoryTickData memory;
-    StateTransitionData state_transition;
+    std::vector<StateTransitionData> state_transitions;
+    QueueSnapshotData queue_snapshot;
     bool has_cpu = false;
     bool has_io = false;
     bool has_memory = false;
-    bool has_state_transition = false;
+    bool has_queue_snapshot = false;
   };
 
   std::map<int, TickData> tick_buffer;
@@ -100,6 +108,11 @@ public:
   void log_state_transition(int tick, int pid, const std::string &name,
                             ProcessState from_state, ProcessState to_state,
                             const std::string &reason);
+
+  void log_queue_snapshot(int tick, const std::vector<int> &ready_queue,
+                          const std::vector<int> &blocked_memory_queue,
+                          const std::vector<int> &blocked_io_queue,
+                          int running_pid);
 
   void log_cpu_summary(int total_time, double cpu_utilization,
                        double avg_waiting_time, double avg_turnaround_time,

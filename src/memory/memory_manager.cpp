@@ -2,6 +2,7 @@
 #include "core/process.hpp"
 #include "metrics/metrics_collector.hpp"
 #include <algorithm>
+#include <iostream>
 
 namespace OSSimulator {
 
@@ -219,20 +220,20 @@ bool MemoryManager::reserve_frame_for_task(PageLoadTask &task) {
 
       auto &frame = frames[frame_idx];
       if (frame.occupied) {
+        // Check if the victim page is referenced (second-chance mechanism)
         auto it = process_map.find(frame.process_id);
-        if (it == process_map.end()) {
-          evict_frame(frame_idx);
-        } else {
+        if (it != process_map.end()) {
           Process &victim_proc = *it->second;
           if (frame.page_id >= 0 &&
               frame.page_id < static_cast<int>(victim_proc.page_table.size())) {
             Page &victim_page = victim_proc.page_table[frame.page_id];
             if (victim_page.referenced) {
+              // Cannot evict referenced page, task stays in queue
               return false;
             }
           }
-          evict_frame(frame_idx);
         }
+        evict_frame(frame_idx);
       }
     }
   }
@@ -339,7 +340,12 @@ MemoryManager::complete_active_task(int completion_time) {
                                   total_page_faults, total_replacements);
   }
 
-  if (are_all_pages_resident(*process)) {
+  // Check if this process has no more pending pages
+  auto pending_it_check = pending_pages_by_process.find(pid);
+  bool no_pending_pages = (pending_it_check == pending_pages_by_process.end() || 
+                           pending_it_check->second.empty());
+  
+  if (no_pending_pages && processes_waiting_on_memory.count(pid) > 0) {
     processes_waiting_on_memory.erase(pid);
     set_process_pages_referenced(*process, true);
     return process;
