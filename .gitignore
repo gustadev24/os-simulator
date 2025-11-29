@@ -4,3 +4,5 @@ build
 docs
 test*.jsonl
 data/resultados/
+data/diagramas/
+venv/
