@@ -80,7 +80,8 @@ void MetricsCollector::flush_tick(int tick) {
     has_data = true;
 
     if (!data.has_cpu && !data.has_io && !data.has_memory &&
-        data.state_transitions.empty() && !data.has_queue_snapshot) {
+        data.state_transitions.empty() && !data.has_queue_snapshot &&
+        !data.has_page_table && !data.has_frame_status) {
       tick_buffer.erase(it);
       return;
     }
@@ -140,6 +141,31 @@ void MetricsCollector::flush_tick(int tick) {
                    {"blocked_memory", data.queue_snapshot.blocked_memory_queue},
                    {"blocked_io", data.queue_snapshot.blocked_io_queue},
                    {"running", data.queue_snapshot.running_pid}};
+  }
+
+  if (data.has_page_table) {
+    json pages = json::array();
+    for (const auto &entry : data.page_table.pages) {
+      pages.push_back({{"page", entry.page_id},
+                       {"frame", entry.frame_id},
+                       {"valid", entry.valid},
+                       {"referenced", entry.referenced},
+                       {"modified", entry.modified}});
+    }
+    j["page_table"] = {{"pid", data.page_table.pid},
+                       {"name", data.page_table.name},
+                       {"pages", pages}};
+  }
+
+  if (data.has_frame_status) {
+    json frames = json::array();
+    for (const auto &entry : data.frame_status.frames) {
+      frames.push_back({{"frame", entry.frame_id},
+                        {"occupied", entry.occupied},
+                        {"pid", entry.pid},
+                        {"page", entry.page_id}});
+    }
+    j["frame_status"] = frames;
   }
 
   write_line(j.dump());
@@ -257,6 +283,27 @@ void MetricsCollector::log_queue_snapshot(
   t.queue_snapshot.blocked_io_queue = blocked_io_queue;
   t.queue_snapshot.running_pid = running_pid;
   t.has_queue_snapshot = true;
+}
+
+void MetricsCollector::log_page_table(
+    int tick, int pid, const std::string &name,
+    const std::vector<PageTableEntry> &page_table) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  auto &t = tick_buffer[tick];
+  t.page_table.pid = pid;
+  t.page_table.name = name;
+  t.page_table.pages = page_table;
+  t.has_page_table = true;
+}
+
+void MetricsCollector::log_frame_status(
+    int tick, const std::vector<FrameStatusEntry> &frame_status) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  auto &t = tick_buffer[tick];
+  t.frame_status.frames = frame_status;
+  t.has_frame_status = true;
 }
 
 void MetricsCollector::log_cpu_summary(int total_time, double cpu_utilization,

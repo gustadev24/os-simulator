@@ -115,6 +115,21 @@ public:
    */
   int get_total_replacements() const;
 
+  /**
+   * Registra el estado de la tabla de páginas de un proceso en las métricas.
+   *
+   * @param tick Tick actual.
+   * @param pid ID del proceso.
+   */
+  void log_process_page_table(int tick, int pid);
+
+  /**
+   * Registra el estado de todos los marcos de memoria en las métricas.
+   *
+   * @param tick Tick actual.
+   */
+  void log_all_frames_status(int tick);
+
 private:
   int total_frames; //!< Número de marcos físicos.
   std::unique_ptr<ReplacementAlgorithm>

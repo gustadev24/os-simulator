@@ -283,6 +283,9 @@ void MemoryManager::evict_frame(int frame_idx) {
                                       evicted_pid, evicted_name,
                                       evicted_page_id, frame_idx,
                                       total_page_faults, total_replacements);
+        // Log page table and frame status after replacement
+        log_process_page_table(memory_time, evicted_pid);
+        log_all_frames_status(memory_time);
       }
     }
   }
@@ -338,6 +341,9 @@ MemoryManager::complete_active_task(int completion_time) {
     metrics_collector->log_memory(completion_time, "PAGE_LOADED", pid,
                                   process->name, page_id, frame_id,
                                   total_page_faults, total_replacements);
+    // Log page table and frame status after page load
+    log_process_page_table(completion_time, pid);
+    log_all_frames_status(completion_time);
   }
 
   // Check if this process has no more pending pages
@@ -348,6 +354,11 @@ MemoryManager::complete_active_task(int completion_time) {
   if (no_pending_pages && processes_waiting_on_memory.count(pid) > 0) {
     processes_waiting_on_memory.erase(pid);
     set_process_pages_referenced(*process, true);
+    // Log final state when process becomes ready
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      log_process_page_table(completion_time, pid);
+      log_all_frames_status(completion_time);
+    }
     return process;
   }
 
@@ -365,6 +376,54 @@ void MemoryManager::set_process_pages_referenced(const Process &process,
       page.referenced = referenced;
     }
   }
+}
+
+void MemoryManager::log_process_page_table(int tick, int pid) {
+  if (!metrics_collector || !metrics_collector->is_enabled())
+    return;
+
+  // NOTE: This method is called from within mutex-locked sections,
+  // so we should NOT acquire the lock here to avoid deadlock
+
+  auto it = process_map.find(pid);
+  if (it == process_map.end())
+    return;
+
+  auto &process = it->second;
+  std::vector<MetricsCollector::PageTableEntry> entries;
+
+  for (const auto &page : process->page_table) {
+    MetricsCollector::PageTableEntry entry;
+    entry.page_id = page.page_id;
+    entry.frame_id = page.frame_number;
+    entry.valid = page.valid;
+    entry.referenced = page.referenced;
+    entry.modified = page.modified;
+    entries.push_back(entry);
+  }
+
+  metrics_collector->log_page_table(tick, pid, process->name, entries);
+}
+
+void MemoryManager::log_all_frames_status(int tick) {
+  if (!metrics_collector || !metrics_collector->is_enabled())
+    return;
+
+  // NOTE: This method is called from within mutex-locked sections,
+  // so we should NOT acquire the lock here to avoid deadlock
+
+  std::vector<MetricsCollector::FrameStatusEntry> entries;
+
+  for (int i = 0; i < total_frames; ++i) {
+    MetricsCollector::FrameStatusEntry entry;
+    entry.frame_id = i;
+    entry.occupied = frames[i].occupied;
+    entry.pid = frames[i].process_id;
+    entry.page_id = frames[i].page_id;
+    entries.push_back(entry);
+  }
+
+  metrics_collector->log_frame_status(tick, entries);
 }
 
 } // namespace OSSimulator
