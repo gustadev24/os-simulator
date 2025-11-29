@@ -1,5 +1,6 @@
 #include "memory/memory_manager.hpp"
 #include "core/process.hpp"
+#include "metrics/metrics_collector.hpp"
 #include <algorithm>
 
 namespace OSSimulator {
@@ -54,6 +55,12 @@ void MemoryManager::unregister_process(int pid) {
 void MemoryManager::set_ready_callback(ProcessReadyCallback callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   ready_callback = std::move(callback);
+}
+
+void MemoryManager::set_metrics_collector(
+    std::shared_ptr<MetricsCollector> collector) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  metrics_collector = collector;
 }
 
 bool MemoryManager::allocate_initial_memory(Process &process) {
@@ -178,6 +185,12 @@ void MemoryManager::enqueue_missing_pages(std::shared_ptr<Process> process,
     fault_queue.push_back(task);
     process->page_faults++;
     total_page_faults++;
+
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_memory(current_time, "PAGE_FAULT", process->pid,
+                                    process->name, page_id, -1,
+                                    total_page_faults, total_replacements);
+    }
   }
 }
 
@@ -240,10 +253,17 @@ void MemoryManager::evict_frame(int frame_idx) {
     return;
   Frame &frame = frames[frame_idx];
 
+  int evicted_pid = -1;
+  std::string evicted_name;
+  int evicted_page_id = frame.page_id;
+
   if (frame.process_id != -1) {
     auto it = process_map.find(frame.process_id);
     if (it != process_map.end()) {
       Process &victim_proc = *it->second;
+      evicted_pid = victim_proc.pid;
+      evicted_name = victim_proc.name;
+
       if (frame.page_id >= 0 &&
           frame.page_id < static_cast<int>(victim_proc.page_table.size())) {
         Page &victim_page = victim_proc.page_table[frame.page_id];
@@ -256,6 +276,13 @@ void MemoryManager::evict_frame(int frame_idx) {
       }
       victim_proc.replacements++;
       total_replacements++;
+
+      if (metrics_collector && metrics_collector->is_enabled()) {
+        metrics_collector->log_memory(memory_time, "PAGE_REPLACED",
+                                      evicted_pid, evicted_name,
+                                      evicted_page_id, frame_idx,
+                                      total_page_faults, total_replacements);
+      }
     }
   }
 
@@ -304,6 +331,12 @@ MemoryManager::complete_active_task(int completion_time) {
 
   if (algorithm && frame_id >= 0) {
     algorithm->on_page_access(frame_id);
+  }
+
+  if (metrics_collector && metrics_collector->is_enabled()) {
+    metrics_collector->log_memory(completion_time, "PAGE_LOADED", pid,
+                                  process->name, page_id, frame_id,
+                                  total_page_faults, total_replacements);
   }
 
   if (are_all_pages_resident(*process)) {

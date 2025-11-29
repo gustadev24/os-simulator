@@ -79,7 +79,8 @@ void MetricsCollector::flush_tick(int tick) {
     data = it->second;
     has_data = true;
 
-    if (!data.has_cpu && !data.has_io) {
+    if (!data.has_cpu && !data.has_io && !data.has_memory &&
+        !data.has_state_transition) {
       tick_buffer.erase(it);
       return;
     }
@@ -110,6 +111,24 @@ void MetricsCollector::flush_tick(int tick) {
                {"name", data.io.name},
                {"remaining", data.io.remaining},
                {"queue", data.io.queue_size}};
+  }
+
+  if (data.has_memory) {
+    j["memory"] = {{"event", data.memory.event},
+                   {"pid", data.memory.pid},
+                   {"name", data.memory.name},
+                   {"page_id", data.memory.page_id},
+                   {"frame_id", data.memory.frame_id},
+                   {"total_page_faults", data.memory.total_page_faults},
+                   {"total_replacements", data.memory.total_replacements}};
+  }
+
+  if (data.has_state_transition) {
+    j["state_transition"] = {{"pid", data.state_transition.pid},
+                             {"name", data.state_transition.name},
+                             {"from", data.state_transition.from_state},
+                             {"to", data.state_transition.to_state},
+                             {"reason", data.state_transition.reason}};
   }
 
   write_line(j.dump());
@@ -162,6 +181,58 @@ void MetricsCollector::log_io(int tick, const std::string &device_name,
   t.has_io = true;
 }
 
+void MetricsCollector::log_memory(int tick, const std::string &event, int pid,
+                                  const std::string &name, int page_id,
+                                  int frame_id, int total_page_faults,
+                                  int total_replacements) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  auto &t = tick_buffer[tick];
+  t.memory.event = event;
+  t.memory.pid = pid;
+  t.memory.name = name;
+  t.memory.page_id = page_id;
+  t.memory.frame_id = frame_id;
+  t.memory.total_page_faults = total_page_faults;
+  t.memory.total_replacements = total_replacements;
+  t.has_memory = true;
+}
+
+std::string MetricsCollector::process_state_to_string(ProcessState state) {
+  switch (state) {
+  case ProcessState::NEW:
+    return "NEW";
+  case ProcessState::READY:
+    return "READY";
+  case ProcessState::MEMORY_WAITING:
+    return "MEMORY_WAITING";
+  case ProcessState::RUNNING:
+    return "RUNNING";
+  case ProcessState::WAITING:
+    return "WAITING";
+  case ProcessState::TERMINATED:
+    return "TERMINATED";
+  default:
+    return "UNKNOWN";
+  }
+}
+
+void MetricsCollector::log_state_transition(int tick, int pid,
+                                            const std::string &name,
+                                            ProcessState from_state,
+                                            ProcessState to_state,
+                                            const std::string &reason) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  auto &t = tick_buffer[tick];
+  t.state_transition.pid = pid;
+  t.state_transition.name = name;
+  t.state_transition.from_state = process_state_to_string(from_state);
+  t.state_transition.to_state = process_state_to_string(to_state);
+  t.state_transition.reason = reason;
+  t.has_state_transition = true;
+}
+
 void MetricsCollector::log_cpu_summary(int total_time, double cpu_utilization,
                                        double avg_waiting_time,
                                        double avg_turnaround_time,
@@ -182,6 +253,29 @@ void MetricsCollector::log_cpu_summary(int total_time, double cpu_utilization,
   j["avg_turnaround_time"] = avg_turnaround_time;
   j["avg_response_time"] = avg_response_time;
   j["context_switches"] = context_switches;
+  j["algorithm"] = algorithm;
+
+  write_line(j.dump());
+}
+
+void MetricsCollector::log_memory_summary(int total_page_faults,
+                                          int total_replacements,
+                                          int total_frames, int used_frames,
+                                          const std::string &algorithm) {
+  std::lock_guard<std::mutex> lock(output_mutex);
+
+  if (mode == OutputMode::DISABLED) {
+    return;
+  }
+
+  json j;
+  j["summary"] = "MEMORY_METRICS";
+  j["total_page_faults"] = total_page_faults;
+  j["total_replacements"] = total_replacements;
+  j["total_frames"] = total_frames;
+  j["used_frames"] = used_frames;
+  j["frame_utilization"] =
+      total_frames > 0 ? (100.0 * used_frames / total_frames) : 0.0;
   j["algorithm"] = algorithm;
 
   write_line(j.dump());

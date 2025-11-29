@@ -19,8 +19,8 @@ TEST_CASE("MetricsCollector initialization", "[metrics][init]") {
   }
 
   SECTION("Enable file output successfully") {
-    std::filesystem::create_directories("data/resultados");
-    const std::string path = "data/resultados/test_metrics.jsonl";
+    std::filesystem::create_directories("data/test/resultados");
+    const std::string path = "data/test/resultados/test_metrics.jsonl";
     
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
@@ -48,8 +48,8 @@ TEST_CASE("MetricsCollector initialization", "[metrics][init]") {
 }
 
 TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_metrics.jsonl";
   
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -126,8 +126,8 @@ TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
 }
 
 TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_io_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_io_metrics.jsonl";
   
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -202,8 +202,8 @@ TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
 }
 
 TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_combined_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_combined_metrics.jsonl";
   
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -278,8 +278,8 @@ TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]")
 }
 
 TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_buffer_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_buffer_metrics.jsonl";
   
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -344,8 +344,8 @@ TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
 }
 
 TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_integration_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_integration_metrics.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -439,8 +439,8 @@ TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration
 
 TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
   SECTION("Switching from file to stdout") {
-    std::filesystem::create_directories("data/resultados");
-    const std::string path = "data/resultados/test_mode_switch.jsonl";
+    std::filesystem::create_directories("data/test/resultados");
+    const std::string path = "data/test/resultados/test_mode_switch.jsonl";
     
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
@@ -464,8 +464,8 @@ TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
   }
 
   SECTION("Disable output clears buffer") {
-    std::filesystem::create_directories("data/resultados");
-    const std::string path = "data/resultados/test_disable.jsonl";
+    std::filesystem::create_directories("data/test/resultados");
+    const std::string path = "data/test/resultados/test_disable.jsonl";
     
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);

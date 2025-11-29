@@ -1,6 +1,7 @@
 #ifndef METRICS_COLLECTOR_HPP
 #define METRICS_COLLECTOR_HPP
 
+#include "core/process.hpp"
 #include <fstream>
 #include <map>
 #include <memory>
@@ -36,11 +37,33 @@ private:
     size_t queue_size = 0;
   };
 
+  struct MemoryTickData {
+    std::string event;
+    int pid = -1;
+    std::string name;
+    int page_id = -1;
+    int frame_id = -1;
+    int total_page_faults = 0;
+    int total_replacements = 0;
+  };
+
+  struct StateTransitionData {
+    int pid = -1;
+    std::string name;
+    std::string from_state;
+    std::string to_state;
+    std::string reason;
+  };
+
   struct TickData {
     CpuTickData cpu;
     IoTickData io;
+    MemoryTickData memory;
+    StateTransitionData state_transition;
     bool has_cpu = false;
     bool has_io = false;
+    bool has_memory = false;
+    bool has_state_transition = false;
   };
 
   std::map<int, TickData> tick_buffer;
@@ -48,6 +71,8 @@ private:
 
   void write_line(const std::string &json_line);
   void flush_tick(int tick);
+
+  static std::string process_state_to_string(ProcessState state);
 
 public:
   MetricsCollector();
@@ -68,11 +93,22 @@ public:
               const std::string &event, int pid, const std::string &name,
               int remaining, size_t queue_size);
 
-  // Aggregated metrics methods
+  void log_memory(int tick, const std::string &event, int pid,
+                  const std::string &name, int page_id, int frame_id,
+                  int total_page_faults, int total_replacements);
+
+  void log_state_transition(int tick, int pid, const std::string &name,
+                            ProcessState from_state, ProcessState to_state,
+                            const std::string &reason);
+
   void log_cpu_summary(int total_time, double cpu_utilization,
                        double avg_waiting_time, double avg_turnaround_time,
                        double avg_response_time, int context_switches,
                        const std::string &algorithm);
+
+  void log_memory_summary(int total_page_faults, int total_replacements,
+                          int total_frames, int used_frames,
+                          const std::string &algorithm);
 };
 
 } // namespace OSSimulator

@@ -28,6 +28,10 @@ void CPUScheduler::set_memory_manager(std::shared_ptr<MemoryManager> mm) {
     memory_manager->set_ready_callback([this](std::shared_ptr<Process> proc) {
       this->handle_memory_ready(proc);
     });
+
+    if (metrics_collector) {
+      memory_manager->set_metrics_collector(metrics_collector);
+    }
   }
 }
 
@@ -50,6 +54,14 @@ void CPUScheduler::set_metrics_collector(
     std::shared_ptr<MetricsCollector> collector) {
   std::lock_guard<std::mutex> lock(scheduler_mutex);
   metrics_collector = collector;
+
+  if (memory_manager && metrics_collector) {
+    memory_manager->set_metrics_collector(metrics_collector);
+  }
+
+  if (io_manager && metrics_collector) {
+    io_manager->set_metrics_collector(metrics_collector);
+  }
 }
 
 void CPUScheduler::add_process(std::shared_ptr<Process> process) {
