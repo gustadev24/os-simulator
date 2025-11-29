@@ -16,7 +16,7 @@ bool MetricsCollector::enable_file_output(const std::string &path) {
 
   try {
     file_out =
-        std::make_unique<std::ofstream>(path, std::ios::out | std::ios::app);
+        std::make_unique<std::ofstream>(path, std::ios::out | std::ios::trunc);
     if (!file_out->is_open()) {
       file_out.reset();
       mode = OutputMode::DISABLED;

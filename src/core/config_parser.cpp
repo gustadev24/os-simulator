@@ -41,7 +41,7 @@ std::vector<Burst> ConfigParser::parse_burst_sequence(const std::string &burst_s
     int duration = std::stoi(match[2].str());
 
     BurstType type = (type_str == "CPU") ? BurstType::CPU : BurstType::IO;
-    std::string device = (type == BurstType::IO) ? "default" : "";
+    std::string device = (type == BurstType::IO) ? "disk" : "";
 
     bursts.emplace_back(type, duration, device);
     ++iter;
