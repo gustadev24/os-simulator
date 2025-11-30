@@ -4,26 +4,6 @@
 
 El simulador desarrollado integra módulos de planificación de procesos y gestión de memoria virtual, manteniendo control en la interacción de ambos mediante el uso de políticas establecidas con el objetivo de lograr un rendimiento óptimo del sistema.
 
-## Inicio Rápido
-
-```bash
-# 1. Compilar
-cmake -S . -B build && cmake --build build
-
-# 2. Ejecutar simulación
-./build/bin/os_simulator
-
-# 3. Generar visualizaciones
-python3 scripts/generate_diagrams.py
-
-# 4. Ver diagramas en data/diagramas/
-```
-
-### Requisitos de Visualización
-```bash
-pip install matplotlib numpy
-```
-
 ## Desarrollo
 
 ### Requisitos
