@@ -1,14 +1,17 @@
 #include "core/config_parser.hpp"
-#include <algorithm>
 #include <cctype>
 #include <fstream>
-#include <iostream>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
 
 namespace OSSimulator {
 
+/**
+ * Elimina espacios en blanco al inicio y final de una cadena.
+ * @param str Cadena a procesar.
+ * @return Cadena sin espacios al inicio ni al final.
+ */
 std::string ConfigParser::trim(const std::string &str) {
   auto start = str.begin();
   while (start != str.end() && std::isspace(*start)) {
@@ -23,13 +26,25 @@ std::string ConfigParser::trim(const std::string &str) {
   return std::string(start, end + 1);
 }
 
+/**
+ * Verifica si una cadena comienza con un prefijo dado.
+ * @param str Cadena a verificar.
+ * @param prefix Prefijo a buscar.
+ * @return true si la cadena comienza con el prefijo, false en caso contrario.
+ */
 bool ConfigParser::starts_with(const std::string &str,
-                                const std::string &prefix) {
+                               const std::string &prefix) {
   return str.size() >= prefix.size() &&
          str.compare(0, prefix.size(), prefix) == 0;
 }
 
-std::vector<Burst> ConfigParser::parse_burst_sequence(const std::string &burst_str) {
+/**
+ * Parsea una secuencia de ráfagas desde una cadena.
+ * @param burst_str Cadena con formato "CPU(x),E/S(y),CPU(z)".
+ * @return Vector de ráfagas parseadas.
+ */
+std::vector<Burst>
+ConfigParser::parse_burst_sequence(const std::string &burst_str) {
   std::vector<Burst> bursts;
   std::regex burst_regex(R"((CPU|E/S)\((\d+)\))");
   std::sregex_iterator iter(burst_str.begin(), burst_str.end(), burst_regex);
@@ -50,6 +65,11 @@ std::vector<Burst> ConfigParser::parse_burst_sequence(const std::string &burst_s
   return bursts;
 }
 
+/**
+ * Parsea una línea del archivo de procesos.
+ * @param line Línea a parsear con formato "PID tiempo_llegada ráfagas prioridad páginas".
+ * @return Puntero al proceso creado, o nullptr si la línea es inválida o un comentario.
+ */
 std::shared_ptr<Process>
 ConfigParser::parse_process_line(const std::string &line) {
   std::string trimmed_line = trim(line);
@@ -66,7 +86,6 @@ ConfigParser::parse_process_line(const std::string &line) {
   int pages_required = 0;
 
   if (!(iss >> pid_str >> arrival_time >> burst_str)) {
-    std::cerr << "Error parsing line: " << line << std::endl;
     return nullptr;
   }
 
@@ -76,13 +95,7 @@ ConfigParser::parse_process_line(const std::string &line) {
   std::vector<Burst> bursts = parse_burst_sequence(burst_str);
 
   if (bursts.empty()) {
-    std::cerr << "Error: no bursts found in line: " << line << std::endl;
     return nullptr;
-  }
-
-  int total_burst_time = 0;
-  for (const auto &burst : bursts) {
-    total_burst_time += burst.duration;
   }
 
   int pid = 0;
@@ -92,20 +105,23 @@ ConfigParser::parse_process_line(const std::string &line) {
     } else {
       pid = std::stoi(pid_str);
     }
-  } catch (const std::exception &e) {
-    std::cerr << "Error parsing PID: " << pid_str << std::endl;
+  } catch (const std::exception &) {
     return nullptr;
   }
 
   uint32_t memory_required =
       pages_required > 0 ? static_cast<uint32_t>(pages_required) : 0;
 
-  auto process = std::make_shared<Process>(pid, pid_str, arrival_time, bursts,
-                                           priority, memory_required);
-
-  return process;
+  return std::make_shared<Process>(pid, pid_str, arrival_time, bursts, priority,
+                                   memory_required);
 }
 
+/**
+ * Carga procesos desde un archivo de texto.
+ * @param filename Ruta al archivo de procesos.
+ * @return Vector de procesos cargados.
+ * @throws std::runtime_error Si no se puede abrir el archivo.
+ */
 std::vector<std::shared_ptr<Process>>
 ConfigParser::load_processes_from_file(const std::string &filename) {
   std::vector<std::shared_ptr<Process>> processes;
@@ -116,9 +132,7 @@ ConfigParser::load_processes_from_file(const std::string &filename) {
   }
 
   std::string line;
-  int line_number = 0;
   while (std::getline(file, line)) {
-    line_number++;
     auto process = parse_process_line(line);
     if (process) {
       processes.push_back(process);
@@ -126,18 +140,15 @@ ConfigParser::load_processes_from_file(const std::string &filename) {
   }
 
   file.close();
-
-  if (processes.empty()) {
-    std::cerr << "Warning: No se cargaron procesos del archivo " << filename
-              << std::endl;
-  } else {
-    std::cout << "Se cargaron " << processes.size() << " procesos de "
-              << filename << std::endl;
-  }
-
   return processes;
 }
 
+/**
+ * Carga la configuración del simulador desde un archivo.
+ * @param filename Ruta al archivo de configuración.
+ * @return Estructura con la configuración cargada.
+ * @throws std::runtime_error Si no se puede abrir el archivo.
+ */
 SimulatorConfig
 ConfigParser::load_simulator_config(const std::string &filename) {
   SimulatorConfig config;

@@ -1,138 +1,283 @@
 # Simulador Integrado de Planificación de Procesos y Gestión de Memoria Virtual
 
-## Descripción
+## 1. Descripción
 
-El simulador desarrollado integra módulos de planificación de procesos y gestión de memoria virtual, manteniendo control en la interacción de ambos mediante el uso de políticas establecidas con el objetivo de lograr un rendimiento óptimo del sistema.
+El simulador desarrollado busca simular el comportamiento de un sistema operativo en cuanto a la planificación de procesos, de entrada/salida y gestión de memoria virtual. Además, permite generar métricas y visualizaciones que ayudan a comprender el comportamiento del sistema.
 
-## Desarrollo
+### Características principales
 
-### Requisitos
+- **Planificación de CPU**: Algoritmos FCFS, SJF, Round Robin y Priority
+- **Gestión de memoria virtual**: Paginación con algoritmos de reemplazo FIFO, LRU, NRU y Óptimo
+- **Gestión de E/S**: Simulación de dispositivos de entrada/salida con planificación FCFS y Round Robin
+- **Recolección de métricas**: Generación de archivos JSONL con datos de ejecución
+- **Visualización**: Generación de diagramas y gráficos
 
-- Compilador C++ (GCC, Clang, etc.)
-- [Python 3.12+](https://www.python.org/downloads/) (para visualización)
-- [CMake](https://cmake.org/download/) (para automatización de compilación)
-- [Just](https://github.com/casey/just) (opcional, para automatización de comandos)
-- [Ninja](https://ninja-build.org/) (opcional, para compilación rápida)
+---
 
-### Documentación
+## 2. Instalación
 
-_Doxygen recientemente tuvo un problema con cambios hechos en el kernel de LaTeX, por lo que cualquier versión <1.15 va a fallar con versiones de LaTeX del año 2025_
+### 2.1. Pre-requisitos
 
-- [Doxygen 1.15+](https://www.doxygen.nl/index.html) (para documentación)
-- [LaTeX](https://www.latex-project.org/get/) (para documentación en PDF)
+#### Compilador C++ (C++17 o superior)
 
-### Servidor de lenguaje
+| Sistema Operativo | Instalación                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Windows           | Instalar [Visual Studio](https://visualstudio.microsoft.com/) con "Desktop development with C++" o [MinGW-w64](https://www.mingw-w64.org/) |
+| Linux             | `sudo apt install build-essential` (Debian/Ubuntu) o `sudo dnf install gcc-c++` (Fedora)                                                   |
+| macOS             | `xcode-select --install`                                                                                                                   |
 
-Se recomienda usar el servidor de lenguaje clangd que ya se encuentra configurado para este proyecto.
+#### CMake (3.16 o superior)
 
-### Comandos útiles
+| Sistema Operativo | Instalación                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Windows           | Descargar desde [cmake.org](https://cmake.org/download/) o `winget install Kitware.CMake` |
+| Linux             | `sudo apt install cmake` (Debian/Ubuntu) o `sudo dnf install cmake` (Fedora)              |
+| macOS             | `brew install cmake`                                                                      |
 
-#### Compilación
+#### Python (3.10 o superior)
 
-**La primera build puede tardar un poco más ya que se descargan y construyen las dependencias.**
+| Sistema Operativo | Instalación                                                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows           | Descargar desde [python.org](https://www.python.org/downloads/) o `winget install Python.Python.3.12`                                    |
+| Linux             | `sudo apt install python3 python3-pip python3-venv` (Debian/Ubuntu) o `sudo dnf install python3 python3-pip python3-virtualenv` (Fedora) |
+| macOS             | `brew install python`                                                                                                                    |
 
-Usando CMake:
+#### Ninja (opcional, compilación más rápida)
+
+| Sistema Operativo | Instalación                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| Windows           | `winget install Ninja-build.Ninja`                                                       |
+| Linux             | `sudo apt install ninja-build` (Debian/Ubuntu) o `sudo dnf install ninja-build` (Fedora) |
+| macOS             | `brew install ninja`                                                                     |
+
+#### Just (opcional, automatización de comandos)
+
+| Sistema Operativo | Instalación                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Windows           | `winget install Casey.Just`                                                          |
+| Linux             | `cargo install just` o ver [instalación](https://github.com/casey/just#installation) |
+| macOS             | `brew install just`                                                                  |
+
+#### Doxygen (para documentación)
+
+> **Nota**: Doxygen versión 1.15+ es requerido debido a cambios en el kernel de LaTeX en 2025.
+
+| Sistema Operativo | Instalación                                                        |
+| ----------------- | ------------------------------------------------------------------ |
+| Windows           | Descargar desde [doxygen.nl](https://www.doxygen.nl/download.html) |
+| Linux             | `sudo apt install doxygen` (Debian/Ubuntu)                         |
+| macOS             | `brew install doxygen`                                             |
+
+#### LaTeX (para documentación en PDF)
+
+| Sistema Operativo | Instalación                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| Windows           | Instalar [MiKTeX](https://miktex.org/download) o [TeX Live](https://tug.org/texlive/) |
+| Linux             | `sudo apt install texlive-full` (Debian/Ubuntu)                                       |
+| macOS             | `brew install --cask mactex`                                                          |
+
+---
+
+### 2.2. Descarga de archivos
+
+Clone el repositorio usando Git:
+
+```bash
+git clone https://github.com/gustadev24/os-simulator.git
+cd os-simulator
+```
+
+---
+
+### 2.3. Proceso de instalación (Build de C++)
+
+> **Nota**: La primera compilación puede tardar más tiempo ya que se descargan y construyen las dependencias (Catch2, nlohmann/json).
+
+#### Usando CMake directamente
+
+Windows (PowerShell):
+
+```powershell
+cmake -S . -B build
+cmake --build build
+```
+
+Linux/macOS:
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-Usando Just:
+#### Usando Just (recomendado)
 
 ```bash
 just build
 ```
 
-#### Ejecutar el programa
+El ejecutable se generará en `build/bin/os_simulator`.
 
-El simulador se puede ejecutar de varias formas:
+---
 
-**Modo por defecto** (carga archivos desde `data/procesos/` con métricas habilitadas):
+### 2.4. Ejecución del simulador y del visualizador
+
+#### Ejecutar el simulador
+
+Windows:
+
+```powershell
+.\build\bin\os_simulator.exe
+```
+
+Linux/macOS:
 
 ```bash
 ./build/bin/os_simulator
 ```
 
-**Modo demostración** (ejecuta todos los algoritmos con datos predefinidos):
+#### Configurar el entorno Python para el visualizador
 
-```bash
-./build/bin/os_simulator --demo
+Windows (PowerShell):
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r visualization\requirements.txt
 ```
 
-**Con archivos personalizados**:
+Linux/macOS:
 
 ```bash
-./build/bin/os_simulator -f mi_archivo.txt -c mi_config.txt
+python3 -m venv venv
+source venv/bin/activate
+pip install -r visualization/requirements.txt
 ```
 
-**Con archivo de métricas personalizado**:
+#### Ejecutar el visualizador
+
+Windows:
+
+```powershell
+python -m visualization
+```
+
+Linux/macOS:
 
 ```bash
-./build/bin/os_simulator -m mis_metricas.jsonl
+python3 -m visualization
 ```
 
-**Opciones disponibles**:
+---
 
-- `-f <archivo>`: Archivo de procesos (default: `data/procesos/procesos.txt`)
-- `-c <archivo>`: Archivo de configuración (default: `data/procesos/config.txt`)
-- `-m [archivo]`: Habilitar métricas (default: `data/resultados/metrics.jsonl`)
-- `-d, --demo`: Ejecutar demostración con algoritmos predefinidos
-- `-h, --help`: Mostrar ayuda
+## 3. Uso
 
-Usando Just:
+### 3.1. Simulador
 
-```bash
-just run
+```
+NOMBRE
+    os_simulator - Simulador de planificación de procesos y memoria virtual
+
+SINOPSIS
+    os_simulator [OPCIONES]
+
+DESCRIPCIÓN
+    Simula la ejecución de procesos con diferentes algoritmos de planificación
+    de CPU y gestión de memoria virtual. Genera métricas para análisis posterior.
+
+OPCIONES
+    -f <archivo>
+        Especifica el archivo de procesos a cargar.
+        Por defecto: data/procesos/procesos.txt
+
+    -c <archivo>
+        Especifica el archivo de configuración del simulador.
+        Por defecto: data/procesos/config.txt
+
+    -m <archivo>
+        Especifica el archivo donde se guardarán las métricas.
+        Por defecto: data/resultados/metrics.jsonl
+
+    -h, --help
+        Muestra esta ayuda.
+
+EJEMPLOS
+    # Ejecutar con configuración por defecto y métricas habilitadas
+    ./build/bin/os_simulator
+
+    # Usar archivos personalizados
+    ./build/bin/os_simulator -f mis_procesos.txt -c mi_config.txt
+
+    # Especificar archivo de métricas personalizado
+    ./build/bin/os_simulator -m resultados/test.jsonl
+
+ARCHIVOS DE ENTRADA
+    Archivo de procesos (formato):
+        PID tiempo_llegada CPU(x),E/S(y),CPU(z) prioridad paginas
+
+        Ejemplo:
+        P1 0 CPU(4),E/S(3),CPU(5) 1 4
+        P2 2 CPU(6) 2 5
+
+    Archivo de configuración (formato):
+        total_memory_frames=64
+        frame_size=4096
+        scheduling_algorithm=RoundRobin
+        page_replacement_algorithm=LRU
+        quantum=4
+
+    Algoritmos de planificación disponibles:
+        - FCFS
+        - SJF
+        - RoundRobin
+        - Priority
+
+    Algoritmos de reemplazo de páginas:
+        - FIFO
+        - LRU
+        - Optimal
+        - NRU
 ```
 
-#### Ejecutar tests
+---
 
-Usando CMake:
+### 3.2. Visualizador
 
-```bash
-cmake -S . -B build
-cmake --build build --target tests
-./build/bin/tests
+```
+NOMBRE
+    visualization - Generador de diagramas para métricas del simulador
+
+SINOPSIS
+    python -m visualization [archivo_metricas] [directorio_salida]
+
+DESCRIPCIÓN
+    Lee un archivo de métricas en formato JSONL generado por el simulador
+    y produce diagramas de visualización.
+
+ARGUMENTOS
+    archivo_metricas
+        Ruta al archivo de métricas JSONL.
+        Por defecto: data/resultados/metrics.jsonl
+
+    directorio_salida
+        Directorio donde se guardarán los diagramas generados.
+        Por defecto: data/diagramas
+
+EJEMPLOS
+    # Usar configuración por defecto
+    python -m visualization
+
+    # Especificar archivo de métricas
+    python -m visualization resultados/custom.jsonl
+
+    # Especificar archivo y directorio de salida
+    python -m visualization data/resultados/metrics.jsonl output/graficos
 ```
 
-Usando Just:
+---
 
-```bash
-just test
-```
+### 3.3. Generación de documentación con Doxygen
 
-#### Generar visualizaciones
-
-El simulador genera métricas en formato JSONL que pueden ser visualizadas con el script de Python:
-
-```bash
-python3 -m venv venv # En Windows usa `python -m venv venv`
-source venv/bin/activate  # En Windows usa `venv\Scripts\activate`
-pip install -r requirements.txt
-python3 scripts/generate_diagrams.py
-```
-
-Esto genera 9 diagramas en `data/diagramas/`:
-
-1. **Gantt Chart** - Diagrama de Gantt de ejecución de procesos
-2. **Queue Evolution** - Evolución de colas (Ready, Blocked I/O, Blocked Memory)
-3. **State Timeline** - Línea de tiempo de estados de procesos
-4. **Memory Usage** - Uso de marcos de memoria y fallos de página acumulados
-5. **Page Tables** - Heatmap de tablas de páginas por proceso
-6. **Frame Allocation** - Distribución de marcos de memoria entre procesos
-7. **I/O Operations** - Timeline de operaciones de entrada/salida
-8. **Context Switches** - Visualización de cambios de contexto
-9. **Summary Dashboard** - Dashboard resumen con métricas clave
-
-
-**Uso avanzado**:
-```bash
-# Especificar archivo de métricas y directorio de salida
-python3 scripts/generate_diagrams.py data/resultados/custom.jsonl output/diagrams
-```
-
-#### Generar documentación
+#### Generar documentación HTML
 
 Usando Doxygen:
 
@@ -140,36 +285,69 @@ Usando Doxygen:
 doxygen
 ```
 
-Usando Just:
+O usando Just:
 
 ```bash
 just build-docs
 ```
 
+La documentación se genera en `docs/`.
+
 #### Servir documentación localmente
 
-Usando python http.server:
+Windows (PowerShell):
+
+```powershell
+cd docs/html
+python -m http.server 8000
+```
+
+Linux/macOS:
 
 ```bash
 cd docs/html && python3 -m http.server 8000
 ```
 
-Usando Just:
+O usando Just:
 
 ```bash
-just build-docs-serve
+just docs-serve
 ```
 
-#### Convertir documentación a PDF
+Acceder a `http://localhost:8000` en el navegador.
 
-Usando latex:
+#### Generar documentación en PDF
+
+Windows (requiere MiKTeX o TeX Live):
+
+```powershell
+cd docs/latex
+pdflatex refman.tex
+makeindex refman.idx
+pdflatex refman.tex
+```
+
+Linux/macOS:
 
 ```bash
 cd docs/latex && make
 ```
 
-Usando Just:
+O usando Just:
 
 ```bash
-just build-docs-pdf
+just docs-pdf
 ```
+
+El PDF se genera en `docs/latex/refman.pdf`.
+
+---
+
+### 3.4. Carpetas de resultados
+
+| Carpeta            | Contenido                                             |
+| ------------------ | ----------------------------------------------------- |
+| `data/resultados/` | Archivos de métricas JSONL generados por el simulador |
+| `data/diagramas/`  | Diagramas PNG generados por el visualizador           |
+| `docs/html/`       | Documentación HTML generada por Doxygen               |
+| `docs/latex/`      | Documentación LaTeX y PDF generados por Doxygen       |
