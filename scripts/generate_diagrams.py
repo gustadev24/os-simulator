@@ -438,59 +438,114 @@ class MetricsVisualizer:
         print("  ✓ Frame allocation saved")
     
     def generate_io_operations(self):
-        """Visualización de operaciones de E/S"""
+        """Visualización de operaciones de E/S - mejorada con timeline"""
         print("[INFO] Generating I/O operations visualization...")
         
-        io_events = []
+        # Extract I/O from state transitions
+        io_operations = []
         
         for event in self.metrics:
             tick = event.get('tick', -1)
-            if 'io' in event:
-                io = event['io']
-                if io.get('pid', -1) > 0:
-                    io_events.append({
-                        'tick': tick,
-                        'name': io.get('name'),
-                        'event': io.get('event'),
-                        'remaining': io.get('remaining', 0),
-                        'device': io.get('device', '')
-                    })
+            
+            # Look for I/O start (process going to WAITING state with io_request reason)
+            if 'state_transitions' in event:
+                for trans in event['state_transitions']:
+                    if trans.get('to') == 'WAITING' and trans.get('reason') == 'io_request':
+                        io_operations.append({
+                            'start': tick,
+                            'name': trans['name'],
+                            'type': 'start'
+                        })
+                    elif trans.get('from') == 'WAITING' and trans.get('reason') == 'io_completed':
+                        io_operations.append({
+                            'end': tick,
+                            'name': trans['name'],
+                            'type': 'end'
+                        })
         
-        if not io_events:
+        if not io_operations:
             print("  ⚠ No I/O operations found")
             return
         
-        fig, ax = plt.subplots(figsize=(14, 6))
+        # Match start and end events
+        io_periods = defaultdict(list)
+        pending_starts = {}
         
-        # Group by process
-        process_io = defaultdict(list)
-        for io_evt in io_events:
-            process_io[io_evt['name']].append(io_evt)
+        for op in sorted(io_operations, key=lambda x: x.get('start', x.get('end', 0))):
+            name = op['name']
+            if op['type'] == 'start':
+                pending_starts[name] = op['start']
+            elif op['type'] == 'end' and name in pending_starts:
+                start = pending_starts[name]
+                end = op['end']
+                io_periods[name].append({'start': start, 'end': end, 'duration': end - start})
+                del pending_starts[name]
         
+        if not io_periods:
+            print("  ⚠ No complete I/O periods found")
+            return
+        
+        # Create visualization
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), height_ratios=[2, 1])
+        
+        # Top: Timeline with bars showing I/O duration
         y_pos = 0
         yticks = []
         yticklabels = []
         
-        for proc_name in sorted(process_io.keys()):
-            events = sorted(process_io[proc_name], key=lambda x: x['tick'])
+        all_starts = []
+        all_ends = []
+        
+        for proc_name in sorted(io_periods.keys()):
+            periods = io_periods[proc_name]
             
-            for evt in events:
-                tick = evt['tick']
-                ax.scatter(tick, y_pos, s=100, color=self.process_colors.get(proc_name, '#95A5A6'),
-                          edgecolors='black', linewidth=1.5, zorder=3)
-                ax.text(tick, y_pos + 0.15, f"R:{evt['remaining']}", 
-                       ha='center', va='bottom', fontsize=8)
+            for period in periods:
+                start = period['start']
+                end = period['end']
+                duration = period['duration']
+                
+                all_starts.append(start)
+                all_ends.append(end)
+                
+                # Draw I/O period as bar
+                color = self.process_colors.get(proc_name, '#95A5A6')
+                ax1.barh(y_pos, duration, left=start, height=0.6,
+                        color=color, alpha=0.7, edgecolor='black', linewidth=1.5)
+                
+                # Label with duration
+                mid = start + duration / 2
+                ax1.text(mid, y_pos, f'{duration}', ha='center', va='center',
+                        fontsize=9, fontweight='bold', color='white')
             
             yticks.append(y_pos)
-            yticklabels.append(proc_name)
+            yticklabels.append(f'{proc_name} ({len(periods)} ops)')
             y_pos += 1
         
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels)
-        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Process', fontsize=12, fontweight='bold')
-        ax.set_title('I/O Operations Timeline', fontsize=14, fontweight='bold')
-        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax1.set_yticks(yticks)
+        ax1.set_yticklabels(yticklabels)
+        ax1.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('Process', fontsize=12, fontweight='bold')
+        ax1.set_title('I/O Operations Timeline (Blocked Periods)', fontsize=14, fontweight='bold')
+        ax1.grid(axis='x', alpha=0.3, linestyle='--')
+        
+        # Bottom: I/O queue size over time
+        io_queue_data = []
+        for event in self.metrics:
+            if 'queues' in event:
+                tick = event.get('tick', -1)
+                blocked_io = event['queues'].get('blocked_io', [])
+                io_queue_data.append({'tick': tick, 'size': len(blocked_io)})
+        
+        if io_queue_data:
+            ticks = [d['tick'] for d in io_queue_data]
+            sizes = [d['size'] for d in io_queue_data]
+            ax2.step(ticks, sizes, where='post', color='#E74C3C', linewidth=2, label='I/O Queue Size')
+            ax2.fill_between(ticks, 0, sizes, step='post', alpha=0.3, color='#E74C3C')
+            ax2.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+            ax2.set_ylabel('Queue Size', fontsize=12, fontweight='bold')
+            ax2.set_title('Blocked I/O Queue Size', fontsize=14, fontweight='bold')
+            ax2.grid(True, alpha=0.3)
+            ax2.set_xlim(left=0)
         
         plt.tight_layout()
         plt.savefig(self.output_dir / '07_io_operations.png', dpi=300, bbox_inches='tight')
