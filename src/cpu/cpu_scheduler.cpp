@@ -1,4 +1,5 @@
 #include "cpu/cpu_scheduler.hpp"
+#include "core/process.hpp"
 #include "cpu/round_robin_scheduler.hpp"
 #include "io/io_manager.hpp"
 #include "io/io_request.hpp"
@@ -109,7 +110,7 @@ void CPUScheduler::add_arrived_processes() {
         ProcessState old_state = proc->state.load();
         proc->state = ProcessState::READY;
         scheduler->add_process(proc);
-        
+
         if (metrics_collector && metrics_collector->is_enabled()) {
           metrics_collector->log_state_transition(
               current_time, proc->pid, proc->name, old_state,
@@ -170,18 +171,18 @@ void CPUScheduler::execute_step(int quantum) {
                                                  current_time)) {
       // Process blocked on memory - mark it inactive so pages can be evicted
       memory_manager->mark_process_inactive(*running_process);
-      
+
       ProcessState old_state = running_process->state.load();
       running_process->state = ProcessState::MEMORY_WAITING;
       scheduler->remove_process(running_process->pid);
-      
+
       if (metrics_collector && metrics_collector->is_enabled()) {
         metrics_collector->log_state_transition(
             current_time, running_process->pid, running_process->name,
             old_state, ProcessState::MEMORY_WAITING, "page_fault");
         send_queue_snapshot();
       }
-      
+
       running_process = nullptr;
       return;
     }
@@ -282,11 +283,20 @@ void CPUScheduler::execute_step(int quantum) {
       if (memory_manager) {
         memory_manager->mark_process_inactive(*running_process);
       }
+
+      ProcessState old_state = running_process->state.load();
       {
         std::lock_guard<std::mutex> lock(running_process->process_mutex);
         running_process->state = ProcessState::READY;
         running_process->state_cv.notify_all();
       }
+
+      if (metrics_collector && metrics_collector->is_enabled()) {
+        metrics_collector->log_state_transition(
+            current_time, running_process->pid, running_process->name,
+            old_state, ProcessState::READY, "preempted");
+      }
+
       scheduler->remove_process(running_process->pid);
       scheduler->add_process(running_process);
 
@@ -302,12 +312,21 @@ void CPUScheduler::execute_step(int quantum) {
       if (memory_manager) {
         memory_manager->mark_process_inactive(*running_process);
       }
+
+      ProcessState old_state = running_process->state.load();
       {
         std::lock_guard<std::mutex> lock(running_process->process_mutex);
         running_process->state = ProcessState::READY;
         running_process->step_complete = false;
         running_process->state_cv.notify_all();
       }
+
+      if (metrics_collector && metrics_collector->is_enabled()) {
+        metrics_collector->log_state_transition(
+            current_time, running_process->pid, running_process->name,
+            old_state, ProcessState::READY, "quantum_expired");
+      }
+
       scheduler->remove_process(running_process->pid);
       scheduler->add_process(running_process);
     } else {
@@ -459,7 +478,7 @@ void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
     ProcessState old_state = proc->state.load();
     proc->state = ProcessState::TERMINATED;
     completed_processes.push_back(proc);
-    
+
     if (metrics_collector && metrics_collector->is_enabled()) {
       metrics_collector->log_state_transition(
           completion_time, proc->pid, proc->name, old_state,
@@ -473,7 +492,7 @@ void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
       scheduler->add_process(proc);
       request_preemption_if_needed(proc);
     }
-    
+
     if (metrics_collector && metrics_collector->is_enabled()) {
       metrics_collector->log_state_transition(
           completion_time, proc->pid, proc->name, old_state,
@@ -624,7 +643,7 @@ std::vector<int> CPUScheduler::get_io_waiting_pids() const {
 }
 
 int CPUScheduler::get_running_pid() const {
-  if (running_process) {
+  if (running_process && running_process->state == ProcessState::RUNNING) {
     return running_process->pid;
   }
   return -1;
@@ -682,8 +701,8 @@ void CPUScheduler::send_queue_snapshot(int tick) {
   auto io_pids = get_io_waiting_pids();
   int running_pid = get_running_pid();
 
-  metrics_collector->log_queue_snapshot(tick, ready_pids, memory_pids,
-                                        io_pids, running_pid);
+  metrics_collector->log_queue_snapshot(tick, ready_pids, memory_pids, io_pids,
+                                        running_pid);
 }
 
 } // namespace OSSimulator
