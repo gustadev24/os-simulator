@@ -1,12 +1,27 @@
+set shell := ["bash", "-cu"]
+
+[unix]
 build:
-  cmake -S . -B build
-  cmake --build build
+    ./scripts/build.sh
+
+[windows]
+build:
+    ./scripts/build.ps1
 
 test: build
-  ./build/bin/tests
+    ./build/bin/tests
 
 run: build
-  ./build/bin/os_simulator
+    ./build/bin/os_simulator
 
-clean: 
-  rm -rf build
+clean:
+    rm -rf build
+
+build-docs:
+    doxygen
+
+docs-serve: build-docs
+    pushd docs/html && python3 -m http.server 8000 && popd
+
+docs-pdf: build-docs
+    pushd docs/latex && make && popd

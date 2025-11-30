@@ -1,0 +1,17 @@
+# Configuración del simulador de Sistema Operativo
+# Este archivo contiene los parámetros globales del simulador
+
+# Gestión de Memoria
+total_memory_frames=64
+frame_size=4096
+
+# Algoritmos de Planificación
+# Opciones: FCFS, SJF, RoundRobin, Priority
+scheduling_algorithm=RoundRobin
+
+# Algoritmo de Reemplazo de Páginas
+# Opciones: FIFO, LRU, Optimal, NRU
+page_replacement_algorithm=LRU
+
+# Quantum para Round Robin (en unidades de tiempo)
+quantum=4

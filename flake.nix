@@ -19,11 +19,31 @@
           };
         in
         pkgs.mkShell {
-          packages = with pkgs; [
-            gcc
-            cmake
-            just
-          ];
+          packages = (
+            with pkgs;
+            [
+              gcc
+              gdb
+              ninja
+              cmake
+              just
+              graphviz
+              doxygen
+              texlive.combined.scheme-full
+              (python312.withPackages (
+                ps: with ps; [
+                  matplotlib
+                  numpy
+                  pytest
+                  pandas
+                  seaborn
+                  plotutils
+                  click
+                  pip
+                ]
+              ))
+            ]
+          );
           buildInputs = [ pkgs.bashInteractive ];
           shellHook = '''';
         };

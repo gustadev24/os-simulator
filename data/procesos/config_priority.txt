@@ -1,0 +1,6 @@
+# Configuración para Priority Scheduling
+total_memory_frames=48
+frame_size=4096
+scheduling_algorithm=Priority
+page_replacement_algorithm=LRU
+quantum=4
