@@ -14,6 +14,7 @@
 namespace OSSimulator {
 
 struct Process;
+class MetricsCollector;
 
 /**
  * Clase que gestiona la memoria en la simulación.
@@ -52,6 +53,13 @@ public:
     * @param callback Función a invocar.
    */
   void set_ready_callback(ProcessReadyCallback callback);
+
+  /**
+   * Establece el recolector de métricas a utilizar.
+   *
+   * @param collector Puntero al recolector de métricas.
+   */
+  void set_metrics_collector(std::shared_ptr<MetricsCollector> collector);
 
   /**
    * Intenta asignar memoria inicial al proceso.
@@ -107,6 +115,21 @@ public:
    */
   int get_total_replacements() const;
 
+  /**
+   * Registra el estado de la tabla de páginas de un proceso en las métricas.
+   *
+   * @param tick Tick actual.
+   * @param pid ID del proceso.
+   */
+  void log_process_page_table(int tick, int pid);
+
+  /**
+   * Registra el estado de todos los marcos de memoria en las métricas.
+   *
+   * @param tick Tick actual.
+   */
+  void log_all_frames_status(int tick);
+
 private:
   int total_frames; //!< Número de marcos físicos.
   std::unique_ptr<ReplacementAlgorithm>
@@ -117,6 +140,9 @@ private:
   std::unordered_map<int, std::shared_ptr<Process>>
       process_map;   //!< Procesos registrados.
   std::mutex mutex_; //!< Mutex para operaciones internas.
+
+  std::shared_ptr<MetricsCollector>
+      metrics_collector; //!< Recolector de métricas.
 
   struct PageLoadTask {
     std::shared_ptr<Process> process; //!< Proceso al que pertenece la página.

@@ -13,8 +13,8 @@ using namespace OSSimulator;
 using json = nlohmann::json;
 
 TEST_CASE("CPU Metrics - Basic logging", "[metrics][cpu]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_basic_metrics.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_basic_metrics.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -100,8 +100,8 @@ TEST_CASE("CPU Metrics - Basic logging", "[metrics][cpu]") {
 }
 
 TEST_CASE("CPU Metrics - Summary statistics", "[metrics][cpu][summary]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_summary.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_summary.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -147,8 +147,8 @@ TEST_CASE("CPU Metrics - Summary statistics", "[metrics][cpu][summary]") {
 
 TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
           "[metrics][cpu][integration]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_fcfs_integration.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_fcfs_integration.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -249,8 +249,8 @@ TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
 
 TEST_CASE("CPU Metrics - Scheduler integration with Round Robin",
           "[metrics][cpu][integration][rr]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_rr_integration.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_rr_integration.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -337,8 +337,8 @@ TEST_CASE("CPU Metrics - Scheduler integration with Round Robin",
 }
 
 TEST_CASE("CPU Metrics - Ready queue tracking", "[metrics][cpu][queue]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_queue.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_queue.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -396,8 +396,8 @@ TEST_CASE("CPU Metrics - Ready queue tracking", "[metrics][cpu][queue]") {
 }
 
 TEST_CASE("CPU Metrics - Context switch tracking", "[metrics][cpu][context]") {
-  std::filesystem::create_directories("data/resultados");
-  const std::string path = "data/resultados/test_cpu_context.jsonl";
+  std::filesystem::create_directories("data/test/resultados");
+  const std::string path = "data/test/resultados/test_cpu_context.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);

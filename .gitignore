@@ -3,3 +3,6 @@ build
 .cache
 docs
 test*.jsonl
+data/resultados/
+data/diagramas/
+venv/

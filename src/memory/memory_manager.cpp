@@ -1,6 +1,8 @@
 #include "memory/memory_manager.hpp"
 #include "core/process.hpp"
+#include "metrics/metrics_collector.hpp"
 #include <algorithm>
+#include <iostream>
 
 namespace OSSimulator {
 
@@ -54,6 +56,12 @@ void MemoryManager::unregister_process(int pid) {
 void MemoryManager::set_ready_callback(ProcessReadyCallback callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   ready_callback = std::move(callback);
+}
+
+void MemoryManager::set_metrics_collector(
+    std::shared_ptr<MetricsCollector> collector) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  metrics_collector = collector;
 }
 
 bool MemoryManager::allocate_initial_memory(Process &process) {
@@ -178,6 +186,12 @@ void MemoryManager::enqueue_missing_pages(std::shared_ptr<Process> process,
     fault_queue.push_back(task);
     process->page_faults++;
     total_page_faults++;
+
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_memory(current_time, "PAGE_FAULT", process->pid,
+                                    process->name, page_id, -1,
+                                    total_page_faults, total_replacements);
+    }
   }
 }
 
@@ -206,20 +220,20 @@ bool MemoryManager::reserve_frame_for_task(PageLoadTask &task) {
 
       auto &frame = frames[frame_idx];
       if (frame.occupied) {
+        // Check if the victim page is referenced (second-chance mechanism)
         auto it = process_map.find(frame.process_id);
-        if (it == process_map.end()) {
-          evict_frame(frame_idx);
-        } else {
+        if (it != process_map.end()) {
           Process &victim_proc = *it->second;
           if (frame.page_id >= 0 &&
               frame.page_id < static_cast<int>(victim_proc.page_table.size())) {
             Page &victim_page = victim_proc.page_table[frame.page_id];
             if (victim_page.referenced) {
+              // Cannot evict referenced page, task stays in queue
               return false;
             }
           }
-          evict_frame(frame_idx);
         }
+        evict_frame(frame_idx);
       }
     }
   }
@@ -240,10 +254,17 @@ void MemoryManager::evict_frame(int frame_idx) {
     return;
   Frame &frame = frames[frame_idx];
 
+  int evicted_pid = -1;
+  std::string evicted_name;
+  int evicted_page_id = frame.page_id;
+
   if (frame.process_id != -1) {
     auto it = process_map.find(frame.process_id);
     if (it != process_map.end()) {
       Process &victim_proc = *it->second;
+      evicted_pid = victim_proc.pid;
+      evicted_name = victim_proc.name;
+
       if (frame.page_id >= 0 &&
           frame.page_id < static_cast<int>(victim_proc.page_table.size())) {
         Page &victim_page = victim_proc.page_table[frame.page_id];
@@ -256,6 +277,16 @@ void MemoryManager::evict_frame(int frame_idx) {
       }
       victim_proc.replacements++;
       total_replacements++;
+
+      if (metrics_collector && metrics_collector->is_enabled()) {
+        metrics_collector->log_memory(memory_time, "PAGE_REPLACED",
+                                      evicted_pid, evicted_name,
+                                      evicted_page_id, frame_idx,
+                                      total_page_faults, total_replacements);
+        // Log page table and frame status after replacement
+        log_process_page_table(memory_time, evicted_pid);
+        log_all_frames_status(memory_time);
+      }
     }
   }
 
@@ -306,9 +337,28 @@ MemoryManager::complete_active_task(int completion_time) {
     algorithm->on_page_access(frame_id);
   }
 
-  if (are_all_pages_resident(*process)) {
+  if (metrics_collector && metrics_collector->is_enabled()) {
+    metrics_collector->log_memory(completion_time, "PAGE_LOADED", pid,
+                                  process->name, page_id, frame_id,
+                                  total_page_faults, total_replacements);
+    // Log page table and frame status after page load
+    log_process_page_table(completion_time, pid);
+    log_all_frames_status(completion_time);
+  }
+
+  // Check if this process has no more pending pages
+  auto pending_it_check = pending_pages_by_process.find(pid);
+  bool no_pending_pages = (pending_it_check == pending_pages_by_process.end() || 
+                           pending_it_check->second.empty());
+  
+  if (no_pending_pages && processes_waiting_on_memory.count(pid) > 0) {
     processes_waiting_on_memory.erase(pid);
     set_process_pages_referenced(*process, true);
+    // Log final state when process becomes ready
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      log_process_page_table(completion_time, pid);
+      log_all_frames_status(completion_time);
+    }
     return process;
   }
 
@@ -326,6 +376,54 @@ void MemoryManager::set_process_pages_referenced(const Process &process,
       page.referenced = referenced;
     }
   }
+}
+
+void MemoryManager::log_process_page_table(int tick, int pid) {
+  if (!metrics_collector || !metrics_collector->is_enabled())
+    return;
+
+  // NOTE: This method is called from within mutex-locked sections,
+  // so we should NOT acquire the lock here to avoid deadlock
+
+  auto it = process_map.find(pid);
+  if (it == process_map.end())
+    return;
+
+  auto &process = it->second;
+  std::vector<MetricsCollector::PageTableEntry> entries;
+
+  for (const auto &page : process->page_table) {
+    MetricsCollector::PageTableEntry entry;
+    entry.page_id = page.page_id;
+    entry.frame_id = page.frame_number;
+    entry.valid = page.valid;
+    entry.referenced = page.referenced;
+    entry.modified = page.modified;
+    entries.push_back(entry);
+  }
+
+  metrics_collector->log_page_table(tick, pid, process->name, entries);
+}
+
+void MemoryManager::log_all_frames_status(int tick) {
+  if (!metrics_collector || !metrics_collector->is_enabled())
+    return;
+
+  // NOTE: This method is called from within mutex-locked sections,
+  // so we should NOT acquire the lock here to avoid deadlock
+
+  std::vector<MetricsCollector::FrameStatusEntry> entries;
+
+  for (int i = 0; i < total_frames; ++i) {
+    MetricsCollector::FrameStatusEntry entry;
+    entry.frame_id = i;
+    entry.occupied = frames[i].occupied;
+    entry.pid = frames[i].process_id;
+    entry.page_id = frames[i].page_id;
+    entries.push_back(entry);
+  }
+
+  metrics_collector->log_frame_status(tick, entries);
 }
 
 } // namespace OSSimulator

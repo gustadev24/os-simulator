@@ -28,6 +28,10 @@ void CPUScheduler::set_memory_manager(std::shared_ptr<MemoryManager> mm) {
     memory_manager->set_ready_callback([this](std::shared_ptr<Process> proc) {
       this->handle_memory_ready(proc);
     });
+
+    if (metrics_collector) {
+      memory_manager->set_metrics_collector(metrics_collector);
+    }
   }
 }
 
@@ -50,6 +54,14 @@ void CPUScheduler::set_metrics_collector(
     std::shared_ptr<MetricsCollector> collector) {
   std::lock_guard<std::mutex> lock(scheduler_mutex);
   metrics_collector = collector;
+
+  if (memory_manager && metrics_collector) {
+    memory_manager->set_metrics_collector(metrics_collector);
+  }
+
+  if (io_manager && metrics_collector) {
+    io_manager->set_metrics_collector(metrics_collector);
+  }
 }
 
 void CPUScheduler::add_process(std::shared_ptr<Process> process) {
@@ -94,8 +106,15 @@ void CPUScheduler::add_arrived_processes() {
       }
 
       if (allocated) {
+        ProcessState old_state = proc->state.load();
         proc->state = ProcessState::READY;
         scheduler->add_process(proc);
+        
+        if (metrics_collector && metrics_collector->is_enabled()) {
+          metrics_collector->log_state_transition(
+              current_time, proc->pid, proc->name, old_state,
+              ProcessState::READY, "process_arrival");
+        }
       }
     }
   }
@@ -149,8 +168,20 @@ void CPUScheduler::execute_step(int quantum) {
   if (memory_manager) {
     if (!memory_manager->prepare_process_for_cpu(running_process,
                                                  current_time)) {
+      // Process blocked on memory - mark it inactive so pages can be evicted
+      memory_manager->mark_process_inactive(*running_process);
+      
+      ProcessState old_state = running_process->state.load();
       running_process->state = ProcessState::MEMORY_WAITING;
       scheduler->remove_process(running_process->pid);
+      
+      if (metrics_collector && metrics_collector->is_enabled()) {
+        metrics_collector->log_state_transition(
+            current_time, running_process->pid, running_process->name,
+            old_state, ProcessState::MEMORY_WAITING, "page_fault");
+        send_queue_snapshot();
+      }
+      
       running_process = nullptr;
       return;
     }
@@ -161,8 +192,16 @@ void CPUScheduler::execute_step(int quantum) {
     if (memory_manager) {
       memory_manager->mark_process_inactive(*running_process);
     }
+    ProcessState old_state = running_process->state.load();
     running_process->state = ProcessState::WAITING;
     scheduler->remove_process(running_process->pid);
+
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_state_transition(
+          current_time, running_process->pid, running_process->name, old_state,
+          ProcessState::WAITING, "io_request");
+      send_queue_snapshot();
+    }
 
     auto request = std::make_shared<IORequest>(running_process, *current_burst,
                                                current_time);
@@ -216,6 +255,7 @@ void CPUScheduler::execute_step(int quantum) {
 
     completed_processes.push_back(running_process);
 
+    ProcessState old_state = running_process->state.load();
     running_process->state = ProcessState::TERMINATED;
 
     scheduler->remove_process(running_process->pid);
@@ -223,6 +263,13 @@ void CPUScheduler::execute_step(int quantum) {
     if (memory_manager) {
       memory_manager->mark_process_inactive(*running_process);
       memory_manager->release_process_memory(running_process->pid);
+    }
+
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_state_transition(
+          current_time, running_process->pid, running_process->name, old_state,
+          ProcessState::TERMINATED, "burst_completed");
+      send_queue_snapshot();
     }
 
     pending_preemption = false;
@@ -358,9 +405,17 @@ void CPUScheduler::notify_process_running(std::shared_ptr<Process> proc) {
     return;
   std::lock_guard<std::mutex> lock(proc->process_mutex);
 
+  ProcessState old_state = proc->state.load();
   proc->state = ProcessState::RUNNING;
   proc->step_complete = false;
   proc->state_cv.notify_all();
+
+  if (metrics_collector && metrics_collector->is_enabled() &&
+      old_state != ProcessState::RUNNING) {
+    metrics_collector->log_state_transition(current_time, proc->pid, proc->name,
+                                            old_state, ProcessState::RUNNING,
+                                            "scheduled");
+  }
 }
 
 void CPUScheduler::wait_for_process_step(std::shared_ptr<Process> proc) {
@@ -401,13 +456,29 @@ void CPUScheduler::handle_io_completion(std::shared_ptr<Process> proc,
     proc->completion_time = completion_time;
     proc->calculate_metrics();
     proc->stop_thread();
+    ProcessState old_state = proc->state.load();
     proc->state = ProcessState::TERMINATED;
     completed_processes.push_back(proc);
+    
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_state_transition(
+          completion_time, proc->pid, proc->name, old_state,
+          ProcessState::TERMINATED, "io_completed");
+      send_queue_snapshot(completion_time);
+    }
   } else {
+    ProcessState old_state = proc->state.load();
     proc->state = ProcessState::READY;
     if (scheduler) {
       scheduler->add_process(proc);
       request_preemption_if_needed(proc);
+    }
+    
+    if (metrics_collector && metrics_collector->is_enabled()) {
+      metrics_collector->log_state_transition(
+          completion_time, proc->pid, proc->name, old_state,
+          ProcessState::READY, "io_completed");
+      send_queue_snapshot(completion_time);
     }
   }
 }
@@ -420,10 +491,18 @@ void CPUScheduler::handle_memory_ready(std::shared_ptr<Process> proc) {
   if (!scheduler || proc->state == ProcessState::TERMINATED)
     return;
 
+  ProcessState old_state = proc->state.load();
   proc->state = ProcessState::READY;
   scheduler->remove_process(proc->pid);
   scheduler->add_process(proc);
   request_preemption_if_needed(proc);
+
+  if (metrics_collector && metrics_collector->is_enabled()) {
+    metrics_collector->log_state_transition(current_time, proc->pid, proc->name,
+                                            old_state, ProcessState::READY,
+                                            "memory_loaded");
+    send_queue_snapshot();
+  }
 }
 
 void CPUScheduler::advance_memory_manager(int time_slice, int step_start_time,
@@ -514,6 +593,43 @@ size_t CPUScheduler::get_ready_queue_size() const {
   return scheduler->size();
 }
 
+std::vector<int> CPUScheduler::get_ready_queue_pids() const {
+  std::vector<int> pids;
+  for (const auto &proc : all_processes) {
+    if (proc->state == ProcessState::READY) {
+      pids.push_back(proc->pid);
+    }
+  }
+  return pids;
+}
+
+std::vector<int> CPUScheduler::get_memory_waiting_pids() const {
+  std::vector<int> pids;
+  for (const auto &proc : all_processes) {
+    if (proc->state == ProcessState::MEMORY_WAITING) {
+      pids.push_back(proc->pid);
+    }
+  }
+  return pids;
+}
+
+std::vector<int> CPUScheduler::get_io_waiting_pids() const {
+  std::vector<int> pids;
+  for (const auto &proc : all_processes) {
+    if (proc->state == ProcessState::WAITING) {
+      pids.push_back(proc->pid);
+    }
+  }
+  return pids;
+}
+
+int CPUScheduler::get_running_pid() const {
+  if (running_process) {
+    return running_process->pid;
+  }
+  return -1;
+}
+
 void CPUScheduler::send_cpu_metrics(const std::string &event,
                                     std::shared_ptr<Process> proc,
                                     bool context_switch) {
@@ -540,6 +656,34 @@ void CPUScheduler::send_cpu_metrics(const std::string &event,
 
   metrics_collector->log_cpu(current_time, event, pid, name, remaining,
                              ready_queue_size, context_switch);
+}
+
+void CPUScheduler::send_queue_snapshot() {
+  if (!metrics_collector || !metrics_collector->is_enabled()) {
+    return;
+  }
+
+  auto ready_pids = get_ready_queue_pids();
+  auto memory_pids = get_memory_waiting_pids();
+  auto io_pids = get_io_waiting_pids();
+  int running_pid = get_running_pid();
+
+  metrics_collector->log_queue_snapshot(current_time, ready_pids, memory_pids,
+                                        io_pids, running_pid);
+}
+
+void CPUScheduler::send_queue_snapshot(int tick) {
+  if (!metrics_collector || !metrics_collector->is_enabled()) {
+    return;
+  }
+
+  auto ready_pids = get_ready_queue_pids();
+  auto memory_pids = get_memory_waiting_pids();
+  auto io_pids = get_io_waiting_pids();
+  int running_pid = get_running_pid();
+
+  metrics_collector->log_queue_snapshot(tick, ready_pids, memory_pids,
+                                        io_pids, running_pid);
 }
 
 } // namespace OSSimulator
