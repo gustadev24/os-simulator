@@ -68,92 +68,87 @@ class MetricsVisualizer:
         """Diagrama de Gantt mostrando la ejecución de procesos"""
         print("[INFO] Generating Gantt chart...")
         
-        fig, ax = plt.subplots(figsize=(16, 6))
+        fig, ax = plt.subplots(figsize=(18, 7))
         
-        # Recopilar información de ejecución
-        process_timeline = defaultdict(list)
+        # Track state for each process over time
+        process_states = {proc: [] for proc in self.processes}
         
         for event in self.metrics:
             tick = event.get('tick', -1)
-            
-            # CPU execution
-            if 'cpu' in event:
-                cpu = event['cpu']
-                pid = cpu.get('pid', -1)
-                name = cpu.get('name', '')
-                if pid > 0 and name:
-                    event_type = cpu.get('event')
-                    process_timeline[name].append({
-                        'tick': tick,
-                        'type': 'CPU',
-                        'event': event_type
-                    })
-            
-            # I/O operations
-            if 'io' in event:
-                io = event['io']
-                pid = io.get('pid', -1)
-                name = io.get('name', '')
-                if pid > 0 and name:
-                    event_type = io.get('event')
-                    process_timeline[name].append({
-                        'tick': tick,
-                        'type': 'IO',
-                        'event': event_type
-                    })
+            if 'state_transitions' in event:
+                for trans in event['state_transitions']:
+                    name = trans['name']
+                    to_state = trans['to']
+                    if name in process_states:
+                        process_states[name].append({
+                            'tick': tick,
+                            'state': to_state
+                        })
         
-        # Draw Gantt bars
+        # Define colors and styles for each state
+        state_style = {
+            'RUNNING': {'color': '#2ECC71', 'alpha': 0.9, 'hatch': None, 'label': 'CPU Execution'},
+            'WAITING': {'color': '#E74C3C', 'alpha': 0.7, 'hatch': '///', 'label': 'I/O Wait'},
+            'READY': {'color': '#3498DB', 'alpha': 0.5, 'hatch': None, 'label': 'Ready'},
+            'MEMORY_WAITING': {'color': '#F39C12', 'alpha': 0.6, 'hatch': '\\\\\\', 'label': 'Memory Wait'},
+            'TERMINATED': {'color': '#95A5A6', 'alpha': 0.3, 'hatch': None, 'label': 'Terminated'},
+            'NEW': {'color': '#9B59B6', 'alpha': 0.4, 'hatch': None, 'label': 'New'}
+        }
+        
+        # Draw bars for each process
         y_pos = 0
         yticks = []
         yticklabels = []
         
+        # Track which states we've added to legend
+        legend_added = set()
+        
         for proc_name in self.processes:
-            events = sorted(process_timeline[proc_name], key=lambda x: x['tick'])
+            states = sorted(process_states[proc_name], key=lambda x: x['tick'])
             
-            current_state = None
-            start_tick = None
-            
-            for i, evt in enumerate(events):
-                if start_tick is None:
-                    start_tick = evt['tick']
-                    current_state = evt['type']
+            for i, state_info in enumerate(states):
+                start = state_info['tick']
+                state = state_info['state']
                 
-                # Check if state changes or it's the last event
-                is_last = (i == len(events) - 1)
-                next_different = (not is_last and events[i+1]['type'] != current_state)
+                # Find end time (next state transition or max tick + 1)
+                if i < len(states) - 1:
+                    end = states[i + 1]['tick']
+                else:
+                    # Last state - extend a bit for visibility
+                    end = max(e.get('tick', 0) for e in self.metrics) + 1
                 
-                if next_different or is_last:
-                    end_tick = evt['tick'] if not is_last else evt['tick'] + 1
-                    duration = end_tick - start_tick
+                duration = end - start
+                
+                if duration > 0 and state in state_style:
+                    style = state_style[state]
                     
-                    if duration > 0:
-                        color = self.process_colors.get(proc_name, '#95A5A6')
-                        alpha = 0.9 if current_state == 'CPU' else 0.5
-                        hatch = None if current_state == 'CPU' else '//'
-                        
-                        ax.barh(y_pos, duration, left=start_tick, height=0.6,
-                               color=color, alpha=alpha, hatch=hatch,
-                               edgecolor='black', linewidth=0.5)
+                    # Always use state color (not process color)
+                    color = style['color']
                     
-                    if not is_last:
-                        start_tick = events[i+1]['tick']
-                        current_state = events[i+1]['type']
+                    label = style['label'] if style['label'] not in legend_added else None
+                    if label:
+                        legend_added.add(label)
+                    
+                    ax.barh(y_pos, duration, left=start, height=0.7,
+                           color=color, alpha=style['alpha'], 
+                           hatch=style['hatch'],
+                           edgecolor='black', linewidth=0.5,
+                           label=label)
             
             yticks.append(y_pos)
             yticklabels.append(proc_name)
             y_pos += 1
         
         ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels)
+        ax.set_yticklabels(yticklabels, fontsize=11, fontweight='bold')
         ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
         ax.set_ylabel('Processes', fontsize=12, fontweight='bold')
-        ax.set_title('Process Execution Gantt Chart', fontsize=14, fontweight='bold')
+        ax.set_title('Process Execution Gantt Chart (All States)', fontsize=14, fontweight='bold')
         ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_xlim(left=0)
         
         # Legend
-        cpu_patch = mpatches.Patch(color='gray', alpha=0.9, label='CPU Execution')
-        io_patch = mpatches.Patch(color='gray', alpha=0.5, hatch='//', label='I/O Operation')
-        ax.legend(handles=[cpu_patch, io_patch], loc='upper right')
+        ax.legend(loc='upper right', fontsize=9, ncol=2)
         
         plt.tight_layout()
         plt.savefig(self.output_dir / '01_gantt_chart.png', dpi=300, bbox_inches='tight')
@@ -179,20 +174,45 @@ class MetricsVisualizer:
                 blocked_memory_counts.append(len(queues.get('blocked_memory', [])))
                 blocked_io_counts.append(len(queues.get('blocked_io', [])))
         
-        fig, ax = plt.subplots(figsize=(14, 6))
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
         
-        ax.plot(ticks, ready_counts, marker='o', label='Ready Queue', 
-               color='#3498DB', linewidth=2, markersize=4)
-        ax.plot(ticks, blocked_memory_counts, marker='s', label='Blocked (Memory)', 
-               color='#F39C12', linewidth=2, markersize=4)
-        ax.plot(ticks, blocked_io_counts, marker='^', label='Blocked (I/O)', 
-               color='#E74C3C', linewidth=2, markersize=4)
+        # Ready Queue
+        ax1.step(ticks, ready_counts, where='post', color='#3498DB', linewidth=2.5, label='Ready Queue')
+        ax1.fill_between(ticks, 0, ready_counts, step='post', alpha=0.3, color='#3498DB')
+        ax1.set_ylabel('Queue Size', fontsize=11, fontweight='bold')
+        ax1.set_title('Ready Queue Evolution', fontsize=12, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.set_ylim(bottom=0)
+        ax1.legend(loc='upper right')
         
-        ax.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Queue Size', fontsize=12, fontweight='bold')
-        ax.set_title('Process Queue Evolution Over Time', fontsize=14, fontweight='bold')
-        ax.legend(loc='upper right', fontsize=10)
-        ax.grid(True, alpha=0.3)
+        # Blocked (Memory) Queue
+        ax2.step(ticks, blocked_memory_counts, where='post', color='#F39C12', linewidth=2.5, label='Blocked (Memory)')
+        ax2.fill_between(ticks, 0, blocked_memory_counts, step='post', alpha=0.3, color='#F39C12')
+        ax2.set_ylabel('Queue Size', fontsize=11, fontweight='bold')
+        ax2.set_title('Blocked (Memory) Queue Evolution', fontsize=12, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.set_ylim(bottom=0)
+        ax2.legend(loc='upper right')
+        
+        # Blocked (I/O) Queue
+        ax3.step(ticks, blocked_io_counts, where='post', color='#E74C3C', linewidth=2.5, label='Blocked (I/O)')
+        ax3.fill_between(ticks, 0, blocked_io_counts, step='post', alpha=0.3, color='#E74C3C')
+        ax3.set_xlabel('Time (ticks)', fontsize=12, fontweight='bold')
+        ax3.set_ylabel('Queue Size', fontsize=11, fontweight='bold')
+        ax3.set_title('Blocked (I/O) Queue Evolution', fontsize=12, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        ax3.set_ylim(bottom=0)
+        ax3.legend(loc='upper right')
+        
+        # Set integer ticks for all axes
+        for ax in [ax1, ax2, ax3]:
+            ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
+            ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+        
+        # Show x-axis labels on all charts (not just bottom)
+        # Remove sharex to allow independent tick labels
+        plt.setp(ax1.get_xticklabels(), visible=True)
+        plt.setp(ax2.get_xticklabels(), visible=True)
         
         plt.tight_layout()
         plt.savefig(self.output_dir / '02_queue_evolution.png', dpi=300, bbox_inches='tight')
@@ -656,19 +676,23 @@ class MetricsVisualizer:
             ax.add_patch(Rectangle((0.05, 0.1), 0.9, 0.8, fill=False, 
                                   edgecolor=color, linewidth=3))
         
-        # State transitions pie
+        # State transitions pie - starts from row 2 to avoid overlap
         if state_counts:
-            ax = fig.add_subplot(gs[1:, :])
+            ax = fig.add_subplot(gs[2, :])
             labels = list(state_counts.keys())
             sizes = list(state_counts.values())
-            colors = [self.state_colors.get(l, '#95A5A6') for l in labels]
+            pie_colors = [self.state_colors.get(l, '#95A5A6') for l in labels]
             
-            wedges, texts, autotexts = ax.pie(sizes, labels=labels, autopct='%1.1f%%',
-                                               colors=colors, startangle=90)
+            wedges, texts, autotexts = ax.pie(sizes, autopct='%1.1f%%',
+                                               colors=pie_colors, startangle=90)
             for autotext in autotexts:
                 autotext.set_color('white')
                 autotext.set_fontweight('bold')
                 autotext.set_fontsize(10)
+            
+            # Add legend
+            ax.legend(wedges, labels, title="States", loc="center left", 
+                     bbox_to_anchor=(1, 0, 0.5, 1), fontsize=10)
             
             ax.set_title('State Transitions Distribution', fontsize=14, fontweight='bold')
         
