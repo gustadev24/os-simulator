@@ -39,6 +39,7 @@
                   seaborn
                   plotutils
                   click
+                  pip
                 ]
               ))
             ]
