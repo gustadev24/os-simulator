@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Dict, List, Any
 from collections import defaultdict
 
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visualization.base_generator import BaseGenerator
@@ -39,12 +38,15 @@ class IOOperationsGenerator(BaseGenerator):
         if not io_periods:
             return
         
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), height_ratios=[2, 1])
-        
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+
         self._draw_io_timeline(ax1, io_periods)
         self._draw_io_queue_size(ax2, loader)
-        
-        self.save_figure('07_io_operations.png')
+
+        # Ensure both axes share the same x-range calculated from IO periods and queue ticks
+        self._set_common_xrange(ax1, ax2, io_periods, loader)
+
+        self.save_figure('06_io_operations.png')
     
     def _match_io_periods(self, io_operations: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -90,22 +92,21 @@ class IOOperationsGenerator(BaseGenerator):
                 
                 color = self.get_process_color(proc_name)
                 ax.barh(y_pos, duration, left=start, height=0.6,
-                       color=color, alpha=0.7, edgecolor='black', linewidth=1.5)
+                       color=color, alpha=0.8, edgecolor='#374151', 
+                       linewidth=self.STYLE['bar_edge_width'])
                 
                 mid = start + duration / 2
                 ax.text(mid, y_pos, f'{duration}', ha='center', va='center',
-                       fontsize=9, fontweight='bold', color='white')
+                       fontsize=self.FONT_SIZES['annotation'], fontweight='bold', color='white')
             
             yticks.append(y_pos)
             yticklabels.append(f'{proc_name} ({len(periods)} ops)')
             y_pos += 1
         
         ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels)
-        ax.set_xlabel('Tiempo (ticks)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Proceso', fontsize=12, fontweight='bold')
-        ax.set_title('Línea Temporal de Operaciones E/S (Períodos Bloqueados)', fontsize=14, fontweight='bold')
-        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_yticklabels(yticklabels, fontsize=self.FONT_SIZES['tick_label'])
+        self.style_axis(ax, xlabel='Tiempo (ticks)', ylabel='Proceso',
+                       title='Línea Temporal de Operaciones E/S (Períodos Bloqueados)', grid_axis='x')
     
     def _draw_io_queue_size(self, ax: plt.Axes, loader: MetricsLoader) -> None:
         """
@@ -117,13 +118,56 @@ class IOOperationsGenerator(BaseGenerator):
         ticks = queue_data['ticks']
         sizes = queue_data['blocked_io']
         
-        palette = sns.color_palette()
-        
         if ticks:
-            ax.step(ticks, sizes, where='post', color=palette[3], linewidth=2, label='Tamaño Cola E/S')
-            ax.fill_between(ticks, 0, sizes, step='post', alpha=0.3, color=palette[3])
-            ax.set_xlabel('Tiempo (ticks)', fontsize=12, fontweight='bold')
-            ax.set_ylabel('Tamaño Cola', fontsize=12, fontweight='bold')
-            ax.set_title('Tamaño de Cola de Bloqueados E/S', fontsize=14, fontweight='bold')
-            ax.grid(True, alpha=0.3)
+            ax.step(ticks, sizes, where='post', 
+                   color=self.CHART_COLORS['quaternary'], linewidth=self.STYLE['line_width'], 
+                   label='Tamaño Cola E/S')
+            ax.fill_between(ticks, 0, sizes, step='post', 
+                          alpha=self.STYLE['fill_alpha'], color=self.CHART_COLORS['quaternary'])
+            self.style_axis(ax, xlabel='Tiempo (ticks)', ylabel='Tamaño Cola',
+                          title='Tamaño de Cola de Bloqueados E/S')
             ax.set_xlim(left=0)
+            self.configure_axis_ticks(ax, x_data=ticks, y_data=sizes)
+
+    def _set_common_xrange(self, ax1: plt.Axes, ax2: plt.Axes, io_periods: Dict[str, List[Dict[str, Any]]], loader: MetricsLoader) -> None:
+        """
+        @brief Set the same x-axis limits for both axes using available IO periods and queue ticks.
+        @param ax1 First Axes instance.
+        @param ax2 Second Axes instance.
+        @param io_periods Dict with IO periods by process.
+        @param loader MetricsLoader instance (used to retrieve queue ticks).
+        """
+        xs: List[float] = []
+
+        # gather start/end from io_periods
+        for periods in io_periods.values():
+            for p in periods:
+                try:
+                    xs.append(float(p.get('start', 0)))
+                    xs.append(float(p.get('end', 0)))
+                except Exception:
+                    continue
+
+        # gather ticks from queue data
+        try:
+            queue_data = loader.get_queue_data()
+            ticks = queue_data.get('ticks', []) if isinstance(queue_data, dict) else []
+            xs.extend([float(t) for t in ticks])
+        except Exception:
+            pass
+
+        if not xs:
+            return
+
+        xmin = min(xs)
+        xmax = max(xs)
+
+        # add a small padding to the range
+        span = xmax - xmin
+        pad = span * 0.02 if span > 0 else 1
+
+        left = max(0, xmin - pad)
+        right = xmax + pad
+
+        ax1.set_xlim(left, right)
+        ax2.set_xlim(left, right)

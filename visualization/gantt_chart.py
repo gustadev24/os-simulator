@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Dict, List, Any
 
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visualization.base_generator import BaseGenerator
@@ -16,15 +15,16 @@ class GanttChartGenerator(BaseGenerator):
     a lo largo del tiempo en un formato de barras horizontales.
     """
     
-    STATE_STYLE = {
-        'RUNNING': {'color': '#2ECC71', 'alpha': 0.9, 'hatch': None, 'label': 'Ejecución CPU'},
-        'WAITING': {'color': '#E74C3C', 'alpha': 0.7, 'hatch': '///', 'label': 'Espera E/S'},
-        'READY': {'color': '#3498DB', 'alpha': 0.5, 'hatch': None, 'label': 'Listo'},
-        'MEMORY_WAITING': {'color': '#F39C12', 'alpha': 0.6, 'hatch': '\\\\\\', 'label': 'Espera Memoria'},
-        'TERMINATED': {'color': '#95A5A6', 'alpha': 0.3, 'hatch': None, 'label': 'Terminado'},
-        'NEW': {'color': '#9B59B6', 'alpha': 0.4, 'hatch': None, 'label': 'Nuevo'}
-    }
-    """@brief Estilos de visualización para cada estado de proceso."""
+    def _get_state_style(self):
+        """@brief Retorna estilos de visualización usando colores normalizados."""
+        return {
+            'RUNNING': {'color': self.STATE_COLORS['RUNNING'], 'alpha': 0.9, 'hatch': None, 'label': 'Ejecución CPU'},
+            'WAITING': {'color': self.STATE_COLORS['WAITING'], 'alpha': 0.8, 'hatch': '///', 'label': 'Espera E/S'},
+            'READY': {'color': self.STATE_COLORS['READY'], 'alpha': 0.6, 'hatch': None, 'label': 'Listo'},
+            'MEMORY_WAITING': {'color': self.STATE_COLORS['MEMORY_WAITING'], 'alpha': 0.7, 'hatch': '\\\\\\', 'label': 'Espera Memoria'},
+            'TERMINATED': {'color': self.STATE_COLORS['TERMINATED'], 'alpha': 0.4, 'hatch': None, 'label': 'Terminado'},
+            'NEW': {'color': self.STATE_COLORS['NEW'], 'alpha': 0.5, 'hatch': None, 'label': 'Nuevo'}
+        }
     
     def __init__(self, output_dir: Path):
         """
@@ -42,6 +42,7 @@ class GanttChartGenerator(BaseGenerator):
         
         process_states = loader.get_state_transitions()
         max_tick = loader.get_max_tick()
+        state_styles = self._get_state_style()
         
         y_pos = 0
         yticks = []
@@ -62,8 +63,8 @@ class GanttChartGenerator(BaseGenerator):
                 
                 duration = end - start
                 
-                if duration > 0 and state in self.STATE_STYLE:
-                    style = self.STATE_STYLE[state]
+                if duration > 0 and state in state_styles:
+                    style = state_styles[state]
                     color = style['color']
                     
                     label = style['label'] if style['label'] not in legend_added else None
@@ -73,7 +74,7 @@ class GanttChartGenerator(BaseGenerator):
                     ax.barh(y_pos, duration, left=start, height=0.7,
                            color=color, alpha=style['alpha'], 
                            hatch=style['hatch'],
-                           edgecolor='black', linewidth=0.5,
+                           edgecolor='#374151', linewidth=self.STYLE['bar_edge_width'],
                            label=label)
             
             yticks.append(y_pos)
@@ -81,12 +82,14 @@ class GanttChartGenerator(BaseGenerator):
             y_pos += 1
         
         ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels, fontsize=11, fontweight='bold')
-        ax.set_xlabel('Tiempo (ticks)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Procesos', fontsize=12, fontweight='bold')
-        ax.set_title('Diagrama de Gantt - Ejecución de Procesos', fontsize=14, fontweight='bold')
-        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_yticklabels(yticklabels, fontsize=self.FONT_SIZES['tick_label'], fontweight='bold')
+        
+        self.style_axis(ax, xlabel='Tiempo (ticks)', ylabel='Procesos',
+                       title='Diagrama de Gantt - Ejecución de Procesos', grid_axis='x')
+        
+        # Configure x-axis ticks based on max_tick
+        self.configure_axis_ticks(ax, x_data=list(range(max_tick + 1)), integer_x=True, integer_y=False)
         ax.set_xlim(left=0)
-        ax.legend(loc='upper right', fontsize=9, ncol=2)
+        ax.legend(loc='upper right', fontsize=self.FONT_SIZES['legend'], ncol=2)
         
         self.save_figure('01_gantt_chart.png')

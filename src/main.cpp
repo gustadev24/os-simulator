@@ -15,72 +15,43 @@
 #include "metrics/metrics_collector.hpp"
 #include <cstring>
 #include <filesystem>
-#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <vector>
 
 using namespace OSSimulator;
 
-void print_header(const std::string &algorithm) {
-  std::cout << "\n========================================\n";
-  std::cout << "  " << algorithm << " Scheduling\n";
-  std::cout << "========================================\n\n";
-}
-
-void print_results(CPUScheduler &scheduler) {
-  auto completed = scheduler.get_completed_processes();
-
-  std::cout << std::left << std::setw(6) << "PID" << std::setw(12) << "Name"
-            << std::setw(10) << "Arrival" << std::setw(10) << "Burst"
-            << std::setw(12) << "Completion" << std::setw(10) << "Waiting"
-            << std::setw(12) << "Turnaround" << std::setw(10) << "Response"
-            << "\n";
-  std::cout << std::string(80, '-') << "\n";
-
-  for (const auto &proc : completed) {
-    std::cout << std::left << std::setw(6) << proc->pid << std::setw(12)
-              << proc->name << std::setw(10) << proc->arrival_time
-              << std::setw(10) << proc->burst_time << std::setw(12)
-              << proc->completion_time << std::setw(10) << proc->waiting_time
-              << std::setw(12) << proc->turnaround_time << std::setw(10)
-              << proc->response_time << "\n";
-  }
-
-  std::cout << "\n";
-  std::cout << "Average Waiting Time:    " << std::fixed << std::setprecision(2)
-            << scheduler.get_average_waiting_time() << "\n";
-  std::cout << "Average Turnaround Time: "
-            << scheduler.get_average_turnaround_time() << "\n";
-  std::cout << "Average Response Time:   "
-            << scheduler.get_average_response_time() << "\n";
-  std::cout << "Context Switches:        " << scheduler.get_context_switches()
-            << "\n";
-  std::cout << "Total Time:              " << scheduler.get_current_time()
-            << "\n";
-}
-
+/**
+ * Ejecuta la simulación con los archivos de configuración y procesos especificados.
+ * @param process_file Ruta al archivo de definición de procesos.
+ * @param config_file Ruta al archivo de configuración del simulador.
+ * @param metrics Colector de métricas opcional para registrar la ejecución.
+ */
 void run_simulation(const std::string &process_file,
                     const std::string &config_file,
                     std::shared_ptr<MetricsCollector> metrics = nullptr) {
-
   try {
     auto config = ConfigParser::load_simulator_config(config_file);
     auto processes = ConfigParser::load_processes_from_file(process_file);
 
     if (processes.empty()) {
-      std::cerr << "No se cargaron procesos." << std::endl;
+      std::cerr << "[ERROR] No se cargaron procesos." << std::endl;
       return;
     }
 
-    std::cout << "\nConfiguración del simulador:\n";
-    std::cout << "  Marcos de memoria: " << config.total_memory_frames << "\n";
-    std::cout << "  Tamaño de marco: " << config.frame_size << " bytes\n";
-    std::cout << "  Algoritmo de planificación: " << config.scheduling_algorithm
+    std::cout << "\n[CONFIGURACIÓN]\n";
+    std::cout << "  Archivo de procesos:      " << process_file << "\n";
+    std::cout << "  Archivo de configuración: " << config_file << "\n";
+    std::cout << "  Marcos de memoria:        " << config.total_memory_frames
               << "\n";
-    std::cout << "  Algoritmo de reemplazo: "
+    std::cout << "  Tamaño de marco:          " << config.frame_size
+              << " bytes\n";
+    std::cout << "  Algoritmo de CPU:         " << config.scheduling_algorithm
+              << "\n";
+    std::cout << "  Algoritmo de reemplazo:   "
               << config.page_replacement_algorithm << "\n";
-    std::cout << "  Quantum: " << config.quantum << "\n\n";
+    std::cout << "  Quantum:                  " << config.quantum << "\n";
+    std::cout << "  Procesos cargados:        " << processes.size() << "\n";
 
     CPUScheduler scheduler;
 
@@ -94,12 +65,11 @@ void run_simulation(const std::string &process_file,
     } else if (config.scheduling_algorithm == "Priority") {
       scheduler.set_scheduler(std::make_unique<PriorityScheduler>());
     } else {
-      std::cerr << "Algoritmo de planificación no reconocido: "
+      std::cerr << "[ERROR] Algoritmo de planificación no reconocido: "
                 << config.scheduling_algorithm << std::endl;
       return;
     }
 
-    // Setup memory manager
     std::unique_ptr<ReplacementAlgorithm> replacement_algo;
     if (config.page_replacement_algorithm == "FIFO") {
       replacement_algo = std::make_unique<FIFOReplacement>();
@@ -110,26 +80,20 @@ void run_simulation(const std::string &process_file,
     } else if (config.page_replacement_algorithm == "NRU") {
       replacement_algo = std::make_unique<NRUReplacement>();
     } else {
-      // Default to FIFO if not recognized
       replacement_algo = std::make_unique<FIFOReplacement>();
     }
 
     auto memory_manager = std::make_shared<MemoryManager>(
         config.total_memory_frames, std::move(replacement_algo), 1);
 
-    // Setup I/O manager
     auto io_manager = std::make_shared<IOManager>();
-
-    // Add default disk device with FCFS scheduler
     auto disk_device = std::make_shared<IODevice>("disk");
     disk_device->set_scheduler(std::make_unique<IOFCFSScheduler>());
     io_manager->add_device("disk", disk_device);
 
-    // Connect managers to scheduler
     scheduler.set_memory_manager(memory_manager);
     scheduler.set_io_manager(io_manager);
 
-    // Connect metrics if enabled
     if (metrics) {
       scheduler.set_metrics_collector(metrics);
       memory_manager->set_metrics_collector(metrics);
@@ -139,13 +103,15 @@ void run_simulation(const std::string &process_file,
     scheduler.load_processes(processes);
     scheduler.run_until_completion();
 
-    print_results(scheduler);
-
   } catch (const std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    std::cerr << "[ERROR] " << e.what() << std::endl;
   }
 }
 
+/**
+ * Muestra el mensaje de ayuda con las opciones disponibles.
+ * @param program_name Nombre del ejecutable.
+ */
 void print_usage(const char *program_name) {
   std::cout << "NOMBRE\n";
   std::cout << "    os_simulator - Simulador de planificación de procesos y "
@@ -181,8 +147,24 @@ void print_usage(const char *program_name) {
   std::cout << "    " << program_name << " -m resultados/test.jsonl\n";
 }
 
+/**
+ * Muestra las instrucciones para generar diagramas de visualización.
+ * @param metrics_file Ruta al archivo de métricas generado.
+ */
+void print_visualization_instructions(const std::string &metrics_file) {
+  std::cout << "\n[DIAGRAMAS]\n";
+  std::cout << "  Para visualizar los resultados, ejecute:\n";
+  std::cout << "    python -m visualization " << metrics_file << "\n";
+  std::cout << "  Los diagramas se guardarán en: data/diagramas/\n";
+}
+
+/**
+ * Punto de entrada principal del simulador.
+ * @param argc Número de argumentos de línea de comandos.
+ * @param argv Arreglo de argumentos de línea de comandos.
+ * @return Código de salida (0 = éxito, 1 = error).
+ */
 int main(int argc, char *argv[]) {
-  // Default file paths
   std::string process_file = "data/procesos/procesos.txt";
   std::string config_file = "data/procesos/config.txt";
   std::string metrics_file = "data/resultados/metrics.jsonl";
@@ -205,64 +187,44 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Create metrics collector if enabled
   std::shared_ptr<MetricsCollector> metrics;
   if (enable_metrics) {
-    // Ensure the file path uses data/resultados/ directory
     std::string final_metrics_path;
     if (metrics_file.find('/') == std::string::npos) {
-      // No directory specified, use data/resultados/
       final_metrics_path = "data/resultados/" + metrics_file;
     } else {
-      // User specified a path, use it as-is
       final_metrics_path = metrics_file;
     }
 
-    // Create directory if it doesn't exist
     std::filesystem::path metrics_path(final_metrics_path);
     std::filesystem::path metrics_dir = metrics_path.parent_path();
 
     if (!metrics_dir.empty()) {
       std::filesystem::create_directories(metrics_dir);
-
-      // Delete existing metrics file if it exists
       if (std::filesystem::exists(final_metrics_path)) {
         std::filesystem::remove(final_metrics_path);
-        std::cout << "[INFO] Eliminado archivo antiguo: \""
-                  << final_metrics_path << "\"\n";
       }
     }
 
     metrics = std::make_shared<MetricsCollector>();
-    if (metrics->enable_file_output(final_metrics_path)) {
-      std::cout << "[INFO] Métricas habilitadas. Salida: " << final_metrics_path
-                << "\n";
-      metrics_file = final_metrics_path; // Update for later message
-    } else {
-      std::cerr << "\n[ERROR] No se pudo abrir el archivo de métricas: "
+    if (!metrics->enable_file_output(final_metrics_path)) {
+      std::cerr << "[ERROR] No se pudo abrir el archivo de métricas: "
                 << final_metrics_path << "\n";
       return 1;
     }
+    metrics_file = final_metrics_path;
   }
-
-  std::cout << "\n";
-  std::cout << "====================================================\n";
-  std::cout << "|   Simulador de Planificación de Procesos         |\n";
-  std::cout << "|   y Gestión de Memoria Virtual                   |\n";
-  std::cout << "====================================================\n";
 
   run_simulation(process_file, config_file, metrics);
 
-  // Flush metrics if enabled
   if (metrics) {
     metrics->flush_all();
     metrics->disable_output();
     std::cout << "\n[INFO] Métricas guardadas en: " << metrics_file << "\n";
+    print_visualization_instructions(metrics_file);
   }
 
-  std::cout << "\n========================================\n";
-  std::cout << "  Simulación Completada\n";
-  std::cout << "========================================\n\n";
+  std::cout << "\n[INFO] Simulación completada.\n\n";
 
   return 0;
 }

@@ -6,11 +6,10 @@ from visualization.data_loader import MetricsLoader
 from visualization.base_generator import BaseGenerator
 from visualization.gantt_chart import GanttChartGenerator
 from visualization.queue_evolution import QueueEvolutionGenerator
-from visualization.state_timeline import StateTimelineGenerator
 from visualization.memory_usage import MemoryUsageGenerator, PageTableGenerator, FrameAllocationGenerator
 from visualization.io_operations import IOOperationsGenerator
 from visualization.context_switches import ContextSwitchesGenerator
-from visualization.summary_dashboard import SummaryDashboardGenerator
+from visualization.summary_dashboard import SummaryDashboardGenerator, StateDistributionGenerator
 
 
 class MetricsVisualizer:
@@ -49,13 +48,13 @@ class MetricsVisualizer:
         self._generators = [
             GanttChartGenerator(self._output_dir),
             QueueEvolutionGenerator(self._output_dir),
-            StateTimelineGenerator(self._output_dir),
             MemoryUsageGenerator(self._output_dir),
             PageTableGenerator(self._output_dir),
             FrameAllocationGenerator(self._output_dir),
             IOOperationsGenerator(self._output_dir),
             ContextSwitchesGenerator(self._output_dir),
             SummaryDashboardGenerator(self._output_dir),
+            StateDistributionGenerator(self._output_dir),
         ]
     
     def generate_all(self) -> None:
@@ -65,10 +64,6 @@ class MetricsVisualizer:
         Carga los datos, prepara el directorio de salida y ejecuta
         cada generador en secuencia.
         """
-        print("\n" + "="*60)
-        print("  GENERANDO DIAGRAMAS DE VISUALIZACIÓN")
-        print("="*60 + "\n")
-        
         self._loader.load()
         print(f"[INFO] Cargados {len(self._loader.metrics)} eventos")
         print(f"[INFO] Procesos encontrados: {', '.join(self._loader.processes)}")
@@ -81,23 +76,18 @@ class MetricsVisualizer:
         generator_names = [
             "Diagrama de Gantt",
             "Evolución de Colas",
-            "Línea Temporal de Estados",
             "Uso de Memoria",
             "Tablas de Páginas",
             "Asignación de Frames",
             "Operaciones E/S",
             "Cambios de Contexto",
             "Dashboard Resumen",
+            "Distribución de Estados",
         ]
         
         for generator, name in zip(self._generators, generator_names):
             print(f"[INFO] Generando {name}...")
             try:
                 generator.generate(self._loader)
-                print(f"  ✓ {name} guardado")
             except Exception as e:
-                print(f"  ⚠ Error generando {name}: {e}")
-        
-        print("\n" + "="*60)
-        print(f"  ✓ Todos los diagramas generados en: {self._output_dir}")
-        print("="*60 + "\n")
+                print(f"[ERROR] Error generando {name}: {e}")

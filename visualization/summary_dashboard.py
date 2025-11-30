@@ -1,9 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Any
 
-import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 
 from visualization.base_generator import BaseGenerator
 from visualization.data_loader import MetricsLoader
@@ -13,9 +11,7 @@ class SummaryDashboardGenerator(BaseGenerator):
     """
     @brief Generador de dashboard resumen.
     
-    Crea un panel con métricas clave de la simulación incluyendo
-    tiempo total, cambios de contexto, fallos de página y distribución
-    de transiciones de estado.
+    Crea una tabla con métricas clave de la simulación.
     """
     
     def __init__(self, output_dir: Path):
@@ -27,60 +23,99 @@ class SummaryDashboardGenerator(BaseGenerator):
     
     def generate(self, loader: MetricsLoader) -> None:
         """
-        @brief Genera el dashboard resumen.
+        @brief Genera el dashboard resumen como tabla.
         @param loader Instancia de MetricsLoader con datos cargados.
         """
         summary = loader.get_summary_metrics()
         
-        fig = plt.figure(figsize=(16, 10))
-        gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.axis('off')
         
-        fig.suptitle('Dashboard Resumen de Simulación', fontsize=16, fontweight='bold')
+        fig.suptitle('Resumen de la Simulación', fontsize=self.FONT_SIZES['title'] + 2, fontweight='bold', y=0.95)
         
-        palette = sns.color_palette()
-        
-        metrics_data = [
-            ('Tiempo Total', f'{summary["total_ticks"]} ticks', palette[0]),
-            ('Cambios de Contexto', str(summary["total_context_switches"]), palette[3]),
-            ('Fallos de Página', str(summary["total_page_faults"]), palette[1]),
-            ('Reemplazos de Página', str(summary["total_replacements"]), palette[4]),
-            ('Procesos', str(summary["num_processes"]), palette[2]),
+        table_data = [
+            ['Tiempo Total', f'{summary["total_ticks"]} ticks'],
+            ['Procesos Simulados', str(summary["num_processes"])],
+            ['Cambios de Contexto', str(summary["total_context_switches"])],
+            ['Fallos de Página', str(summary["total_page_faults"])],
+            ['Reemplazos de Página', str(summary["total_replacements"])],
         ]
         
-        for idx, (label, value, color) in enumerate(metrics_data):
-            row, col = idx // 3, idx % 3
-            ax = fig.add_subplot(gs[row, col])
-            ax.text(0.5, 0.6, value, ha='center', va='center', 
-                   fontsize=32, fontweight='bold', color=color)
-            ax.text(0.5, 0.3, label, ha='center', va='center',
-                   fontsize=14, color='gray')
-            ax.set_xlim(0, 1)
-            ax.set_ylim(0, 1)
-            ax.axis('off')
-            ax.add_patch(Rectangle((0.05, 0.1), 0.9, 0.8, fill=False, 
-                                  edgecolor=color, linewidth=3))
+        table = ax.table(
+            cellText=table_data,
+            colLabels=['Métrica', 'Valor'],
+            loc='center',
+            cellLoc='left',
+            colWidths=[0.5, 0.3]
+        )
         
+        table.auto_set_font_size(False)
+        table.set_fontsize(self.FONT_SIZES['subtitle'])
+        table.scale(1.2, 2.0)
+        
+        for (row, col), cell in table.get_celld().items():
+            if row == 0:
+                cell.set_text_props(fontweight='bold', color='white')
+                cell.set_facecolor(self.TABLE_COLORS['header'])
+            else:
+                cell.set_facecolor(self.TABLE_COLORS['row_even'] if row % 2 == 0 else self.TABLE_COLORS['row_odd'])
+            cell.set_edgecolor(self.TABLE_COLORS['border'])
+        
+        self.save_figure('08_summary_dashboard.png')
+
+
+class StateDistributionGenerator(BaseGenerator):
+    """
+    @brief Generador del gráfico de distribución de estados.
+    
+    Crea un gráfico de pastel con la distribución de transiciones de estado.
+    """
+    
+    def __init__(self, output_dir: Path):
+        """
+        @brief Constructor de StateDistributionGenerator.
+        @param output_dir Directorio de salida para el gráfico.
+        """
+        super().__init__(output_dir)
+    
+    def generate(self, loader: MetricsLoader) -> None:
+        """
+        @brief Genera el gráfico de distribución de estados.
+        @param loader Instancia de MetricsLoader con datos cargados.
+        """
+        summary = loader.get_summary_metrics()
         state_counts = summary.get('state_counts', {})
-        if state_counts:
-            ax = fig.add_subplot(gs[2, :])
-            labels = list(state_counts.keys())
-            sizes = list(state_counts.values())
-            pie_colors = [self.get_state_color(l) for l in labels]
-            
-            wedges, texts, autotexts = ax.pie(
-                sizes, autopct='%1.1f%%',
-                colors=pie_colors, startangle=90
-            )
-            for autotext in autotexts:
-                autotext.set_color('white')
-                autotext.set_fontweight('bold')
-                autotext.set_fontsize(10)
-            
-            ax.legend(
-                wedges, labels, title="Estados", loc="center left", 
-                bbox_to_anchor=(1, 0, 0.5, 1), fontsize=10
-            )
-            
-            ax.set_title('Distribución de Transiciones de Estado', fontsize=14, fontweight='bold')
         
-        self.save_figure('09_summary_dashboard.png')
+        if not state_counts:
+            return
+        
+        filtered_counts = {k: v for k, v in state_counts.items() if k != 'NEW'}
+        
+        if not filtered_counts:
+            return
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        labels = list(filtered_counts.keys())
+        sizes = list(filtered_counts.values())
+        colors = [self.get_state_color(label) for label in labels]
+        
+        wedges, texts, autotexts = ax.pie(
+            sizes, autopct='%1.1f%%',
+            colors=colors, startangle=90
+        )
+        
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+            autotext.set_fontsize(self.FONT_SIZES['tick_label'])
+        
+        ax.legend(
+            wedges, labels, title="Estados", loc="center left",
+            bbox_to_anchor=(1, 0.5), fontsize=self.FONT_SIZES['legend']
+        )
+        
+        ax.set_title('Distribución de Transiciones de Estado', 
+                    fontsize=self.FONT_SIZES['title'], fontweight='bold')
+        
+        self.save_figure('09_state_distribution.png')

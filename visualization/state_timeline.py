@@ -65,6 +65,7 @@ class StateTimelineGenerator(BaseGenerator):
         legend_patches = [
             mpatches.Patch(color=color, label=state) 
             for state, color in self.STATE_COLORS.items()
+            if state != 'NEW'
         ]
         ax.legend(handles=legend_patches, loc='center left', bbox_to_anchor=(1, 0.5))
         

@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Dict, List, Any
 
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visualization.base_generator import BaseGenerator
@@ -44,22 +43,22 @@ class ContextSwitchesGenerator(BaseGenerator):
         
         ax.scatter(
             ticks, [proc_to_num[p] for p in processes], 
-            c=colors, s=150, edgecolors='black', linewidth=1.5, zorder=3
+            c=colors, s=self.STYLE['marker_size'], edgecolors='#374151', 
+            linewidth=self.STYLE['bar_edge_width'], zorder=3
         )
         
         ax.plot(
             ticks, [proc_to_num[p] for p in processes], 
-            color='gray', alpha=0.5, linewidth=1, linestyle='--', zorder=1
+            color=self.CHART_COLORS['neutral'], alpha=0.4, 
+            linewidth=1, linestyle='--', zorder=1
         )
         
         ax.set_yticks(range(len(unique_procs)))
-        ax.set_yticklabels(unique_procs)
-        ax.set_xlabel('Tiempo (ticks)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Proceso', fontsize=12, fontweight='bold')
-        ax.set_title(
-            f'Cambios de Contexto (Total: {len(context_switches)})', 
-            fontsize=14, fontweight='bold'
-        )
-        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_yticklabels(unique_procs, fontsize=self.FONT_SIZES['tick_label'])
         
-        self.save_figure('08_context_switches.png')
+        self.style_axis(ax, xlabel='Tiempo (ticks)', ylabel='Proceso',
+                       title=f'Cambios de Contexto (Total: {len(context_switches)})', grid_axis='x')
+        
+        self.configure_axis_ticks(ax, x_data=ticks, integer_y=False)
+        
+        self.save_figure('07_context_switches.png')

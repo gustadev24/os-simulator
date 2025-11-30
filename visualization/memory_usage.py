@@ -2,9 +2,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 from collections import defaultdict
 
-import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np
 
 from visualization.base_generator import BaseGenerator
 from visualization.data_loader import MetricsLoader
@@ -38,36 +36,36 @@ class MemoryUsageGenerator(BaseGenerator):
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
         
-        palette = sns.color_palette()
-        
         if ticks:
-            ax1.fill_between(ticks, 0, used_frames, alpha=0.4, color=palette[0])
-            ax1.plot(ticks, used_frames, color=palette[0], linewidth=2)
-            ax1.set_ylabel('Frames Usados', fontsize=12, fontweight='bold')
-            ax1.set_title('Uso de Frames de Memoria en el Tiempo', fontsize=14, fontweight='bold')
-            ax1.grid(True, alpha=0.3)
+            ax1.step(ticks, used_frames, where='post', 
+                    color=self.CHART_COLORS['primary'], linewidth=self.STYLE['line_width'])
+            ax1.fill_between(ticks, 0, used_frames, step='post', 
+                           alpha=self.STYLE['fill_alpha'], color=self.CHART_COLORS['primary'])
+            self.style_axis(ax1, xlabel='Tiempo (ticks)', ylabel='Frames Usados',
+                          title='Uso de Frames de Memoria en el Tiempo')
             ax1.set_xlim(left=0)
+            self.configure_axis_ticks(ax1, x_data=ticks, y_data=used_frames)
         
         if page_faults:
             fault_ticks = [pf['tick'] for pf in page_faults]
             fault_totals = [pf['total'] for pf in page_faults]
-            ax2.step(fault_ticks, fault_totals, where='post', color=palette[3], linewidth=2)
-            ax2.fill_between(fault_ticks, 0, fault_totals, step='post', alpha=0.3, color=palette[3])
-            ax2.set_xlabel('Tiempo (ticks)', fontsize=12, fontweight='bold')
-            ax2.set_ylabel('Fallos de Página Totales', fontsize=12, fontweight='bold')
-            ax2.set_title('Fallos de Página Acumulados', fontsize=14, fontweight='bold')
-            ax2.grid(True, alpha=0.3)
+            ax2.step(fault_ticks, fault_totals, where='post', 
+                    color=self.CHART_COLORS['quaternary'], linewidth=self.STYLE['line_width'])
+            ax2.fill_between(fault_ticks, 0, fault_totals, step='post', 
+                           alpha=self.STYLE['fill_alpha'], color=self.CHART_COLORS['quaternary'])
+            self.style_axis(ax2, xlabel='Tiempo (ticks)', ylabel='Fallos de Página Totales',
+                          title='Fallos de Página Acumulados')
             ax2.set_xlim(left=0)
+            self.configure_axis_ticks(ax2, x_data=fault_ticks, y_data=fault_totals)
         
-        self.save_figure('04_memory_usage.png')
+        self.save_figure('03_memory_usage.png')
 
 
 class PageTableGenerator(BaseGenerator):
     """
     @brief Generador de visualización de tablas de páginas.
     
-    Muestra un heatmap de las tablas de páginas para cada proceso,
-    incluyendo información de página, frame, validez y referencia.
+    Muestra una tabla simple de las páginas y frames asignados para cada proceso.
     """
     
     def __init__(self, output_dir: Path):
@@ -79,7 +77,7 @@ class PageTableGenerator(BaseGenerator):
     
     def generate(self, loader: MetricsLoader) -> None:
         """
-        @brief Genera el heatmap de tablas de páginas.
+        @brief Genera la visualización de tablas de páginas.
         @param loader Instancia de MetricsLoader con datos cargados.
         """
         process_page_tables = loader.get_page_tables()
@@ -88,7 +86,7 @@ class PageTableGenerator(BaseGenerator):
             return
         
         num_processes = len(process_page_tables)
-        fig, axes = plt.subplots(1, num_processes, figsize=(5*num_processes, 4))
+        fig, axes = plt.subplots(1, num_processes, figsize=(4*num_processes, 5))
         
         if num_processes == 1:
             axes = [axes]
@@ -99,34 +97,43 @@ class PageTableGenerator(BaseGenerator):
             if not pages:
                 continue
             
-            num_pages = len(pages)
-            data = np.zeros((num_pages, 4))
+            table_data = []
+            for page in pages:
+                page_num = page.get('page', -1)
+                frame_num = page.get('frame', -1)
+                frame_str = str(frame_num) if frame_num >= 0 else '-'
+                table_data.append([str(page_num), frame_str])
             
-            for i, page in enumerate(pages):
-                data[i, 0] = page.get('page', -1)
-                data[i, 1] = page.get('frame', -1)
-                data[i, 2] = 1 if page.get('valid', False) else 0
-                data[i, 3] = 1 if page.get('referenced', False) else 0
+            axes[idx].axis('off')
             
-            sns.heatmap(data.T, ax=axes[idx], cmap='RdYlGn', vmin=-1, vmax=15, 
-                       cbar=False, annot=False)
-            axes[idx].set_title(f'Tabla de Páginas - {proc_name}', fontweight='bold')
-            axes[idx].set_yticks([0.5, 1.5, 2.5, 3.5])
-            axes[idx].set_yticklabels(['Página', 'Frame', 'Válido', 'Ref'])
-            axes[idx].set_xticks(range(num_pages))
-            axes[idx].set_xlabel('Número de Página')
+            table = axes[idx].table(
+                cellText=table_data,
+                colLabels=['Página', 'Frame'],
+                loc='center',
+                cellLoc='center',
+                colWidths=[0.4, 0.4]
+            )
             
-            for i in range(num_pages):
-                for j in range(4):
-                    val = int(data[i, j])
-                    if j < 2:
-                        text = str(val) if val >= 0 else '-'
-                    else:
-                        text = 'S' if val == 1 else 'N'
-                    axes[idx].text(i + 0.5, j + 0.5, text, ha='center', va='center',
-                                  color='black', fontsize=8, fontweight='bold')
+            table.auto_set_font_size(False)
+            table.set_fontsize(self.FONT_SIZES['tick_label'])
+            table.scale(1.2, 1.8)
+            
+            proc_color = self.get_process_color(proc_name)
+            
+            for (row, col), cell in table.get_celld().items():
+                if row == 0:
+                    cell.set_text_props(fontweight='bold', color='white')
+                    cell.set_facecolor(proc_color)
+                else:
+                    cell.set_facecolor(self.TABLE_COLORS['row_even'] if row % 2 == 0 else self.TABLE_COLORS['row_odd'])
+                cell.set_edgecolor(self.TABLE_COLORS['border'])
+            
+            axes[idx].set_title(f'Tabla de Páginas - {proc_name}', 
+                              fontweight='bold', fontsize=self.FONT_SIZES['subtitle'], pad=20)
         
-        self.save_figure('05_page_tables.png')
+        fig.suptitle('Tablas de Páginas por Proceso', fontsize=self.FONT_SIZES['title'], fontweight='bold', y=1.02)
+        
+        self.save_figure('04_page_tables.png')
 
 
 class FrameAllocationGenerator(BaseGenerator):
@@ -169,7 +176,7 @@ class FrameAllocationGenerator(BaseGenerator):
         
         labels = list(frame_counts.keys()) + ['Libre']
         sizes = list(frame_counts.values()) + [free_frames]
-        colors = [self.get_process_color(label) for label in labels[:-1]] + ['#ECF0F1']
+        colors = [self.get_process_color(label) for label in labels[:-1]] + [self.CHART_COLORS['free']]
         
         wedges, texts, autotexts = ax1.pie(
             sizes, labels=labels, autopct='%1.1f%%',
@@ -178,27 +185,27 @@ class FrameAllocationGenerator(BaseGenerator):
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
+            autotext.set_fontsize(self.FONT_SIZES['annotation'])
         
-        ax1.set_title('Distribución de Frames de Memoria', fontsize=14, fontweight='bold')
+        ax1.set_title('Distribución de Frames de Memoria', fontsize=self.FONT_SIZES['title'], fontweight='bold')
         
         processes = sorted(frame_counts.keys())
         counts = [frame_counts[p] for p in processes]
         bars = ax2.bar(
             processes, counts, 
             color=[self.get_process_color(p) for p in processes],
-            edgecolor='black', linewidth=1.5
+            edgecolor='#374151', linewidth=self.STYLE['bar_edge_width']
         )
         
-        ax2.set_ylabel('Frames Asignados', fontsize=12, fontweight='bold')
-        ax2.set_title('Frames por Proceso', fontsize=14, fontweight='bold')
-        ax2.grid(axis='y', alpha=0.3)
+        self.style_axis(ax2, ylabel='Frames Asignados', title='Frames por Proceso', grid_axis='y')
+        self.configure_axis_ticks(ax2, y_data=counts, integer_x=False)
         
         for bar in bars:
             height = bar.get_height()
             ax2.text(
                 bar.get_x() + bar.get_width()/2., height,
                 f'{int(height)}',
-                ha='center', va='bottom', fontweight='bold'
+                ha='center', va='bottom', fontweight='bold', fontsize=self.FONT_SIZES['annotation']
             )
         
-        self.save_figure('06_frame_allocation.png')
+        self.save_figure('05_frame_allocation.png')
