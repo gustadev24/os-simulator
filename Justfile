@@ -1,5 +1,3 @@
-set shell := ["bash", "-cu"]
-
 [unix]
 build:
     ./scripts/build.sh
@@ -21,7 +19,18 @@ build-docs:
     doxygen
 
 docs-serve: build-docs
-    pushd docs/html && python3 -m http.server 8000 && popd
+    cd docs/html && python3 -m http.server 8000
 
 docs-pdf: build-docs
-    pushd docs/latex && make && popd
+    cd docs/latex && make
+
+report:
+    mkdir -p report/build
+    pushd report/src && pdflatex -output-directory=../build informe.tex && popd
+
+report-bib:
+    mkdir -p report/build
+    pushd report/src && latexmk -pdf -output-directory=../build informe.tex && popd
+
+report-clean:
+    rm -rf report/build
