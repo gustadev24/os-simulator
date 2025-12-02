@@ -1,4 +1,5 @@
 #include "io/io_device.hpp"
+#include "io/io_round_robin_scheduler.hpp"
 #include "metrics/metrics_collector.hpp"
 
 namespace OSSimulator {
@@ -7,7 +8,9 @@ IODevice::IODevice(const std::string &name)
     : device_name(name), scheduler(nullptr), current_request(nullptr),
       total_io_time(0), device_switches(0), total_requests_completed(0),
       completion_callback(nullptr), metrics_collector(nullptr),
-      last_event_was_completed(false) {}
+      last_event_was_completed(false), last_event_was_step(false),
+      last_completed_pid(-1), last_completed_name(""), last_step_pid(-1),
+      last_step_name(""), last_step_remaining(0), current_quantum_used(0) {}
 
 void IODevice::set_scheduler(std::unique_ptr<IOScheduler> sched) {
   std::lock_guard<std::mutex> lock(device_mutex);
@@ -18,7 +21,8 @@ void IODevice::set_completion_callback(CompletionCallback callback) {
   completion_callback = callback;
 }
 
-void IODevice::set_metrics_collector(std::shared_ptr<MetricsCollector> collector) {
+void IODevice::set_metrics_collector(
+    std::shared_ptr<MetricsCollector> collector) {
   std::lock_guard<std::mutex> lock(device_mutex);
   metrics_collector = collector;
 }
@@ -47,29 +51,53 @@ void IODevice::execute_step(int quantum, int current_time) {
       return;
     }
     device_switches++;
+    current_quantum_used = 0;
   }
 
   int time_executed = current_request->execute(quantum, current_time);
   total_io_time += time_executed;
+  current_quantum_used += time_executed;
 
   last_event_was_completed = current_request->is_completed();
+  last_event_was_step = false;
 
   if (last_event_was_completed) {
     total_requests_completed++;
+
+    if (current_request->process) {
+      last_completed_pid = current_request->process->pid;
+      last_completed_name = current_request->process->name;
+    }
 
     if (completion_callback && current_request->process) {
       completion_callback(current_request->process,
                           current_time + time_executed);
     }
 
-    if (scheduler->get_algorithm() == IOSchedulingAlgorithm::ROUND_ROBIN) {
-      // Request completed, don't re-add
-    }
-
     current_request = nullptr;
+    current_quantum_used = 0;
   } else if (scheduler->get_algorithm() == IOSchedulingAlgorithm::ROUND_ROBIN) {
-    scheduler->add_request(current_request);
-    current_request = nullptr;
+    auto rr_scheduler = dynamic_cast<IORoundRobinScheduler *>(scheduler.get());
+    int io_quantum = rr_scheduler ? rr_scheduler->get_quantum() : 1;
+
+    if (current_quantum_used >= io_quantum && scheduler->has_requests()) {
+      if (current_request->process) {
+        last_event_was_step = true;
+        last_step_pid = current_request->process->pid;
+        last_step_name = current_request->process->name;
+        last_step_remaining = current_request->burst.remaining_time;
+      }
+      scheduler->add_request(current_request);
+      current_request = nullptr;
+      current_quantum_used = 0;
+    } else {
+      if (current_request->process) {
+        last_event_was_step = true;
+        last_step_pid = current_request->process->pid;
+        last_step_name = current_request->process->name;
+        last_step_remaining = current_request->burst.remaining_time;
+      }
+    }
   }
 }
 
@@ -99,6 +127,13 @@ void IODevice::reset() {
   device_switches = 0;
   total_requests_completed = 0;
   last_event_was_completed = false;
+  last_event_was_step = false;
+  last_completed_pid = -1;
+  last_completed_name = "";
+  last_step_pid = -1;
+  last_step_name = "";
+  last_step_remaining = 0;
+  current_quantum_used = 0;
 }
 
 void IODevice::send_log_metrics(int current_time) {
@@ -114,15 +149,16 @@ void IODevice::send_log_metrics(int current_time) {
   int remaining = 0;
   size_t queue_size = scheduler ? scheduler->size() : 0;
 
-  if (!current_request && queue_size == 0) {
-    event = "IDLE";
-
-  } else if (last_event_was_completed) {
+  if (last_event_was_completed) {
     event = "COMPLETED";
-    if (current_request && current_request->process) {
-      pid = current_request->process->pid;
-      name = current_request->process->name;
-    }
+    pid = last_completed_pid;
+    name = last_completed_name;
+
+  } else if (last_event_was_step) {
+    event = "STEP";
+    pid = last_step_pid;
+    name = last_step_name;
+    remaining = last_step_remaining;
 
   } else if (current_request && current_request->process) {
     event = "STEP";
@@ -134,18 +170,16 @@ void IODevice::send_log_metrics(int current_time) {
     event = "IDLE";
   }
 
-  metrics_collector->log_io(
-      current_time,
-      device_name,
-      event,
-      pid,
-      name,
-      remaining,
-      queue_size);
-  
+  metrics_collector->log_io(current_time, device_name, event, pid, name,
+                            remaining, queue_size);
+
   last_event_was_completed = false;
+  last_event_was_step = false;
+  last_completed_pid = -1;
+  last_completed_name = "";
+  last_step_pid = -1;
+  last_step_name = "";
+  last_step_remaining = 0;
 }
-
-
 
 } // namespace OSSimulator

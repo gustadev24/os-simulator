@@ -31,8 +31,19 @@ private:
   CompletionCallback
       completion_callback; //!< Callback al completar una solicitud.
 
-  std::shared_ptr<MetricsCollector> metrics_collector;
-  bool last_event_was_completed;
+  std::shared_ptr<MetricsCollector>
+      metrics_collector; //!< Recolector de métricas.
+  bool
+      last_event_was_completed; //!< Indica si el último evento fue una finalización.
+  bool
+      last_event_was_step; //!< Indica si el último evento fue un paso de ejecución.
+
+  int last_completed_pid;          //!< PID del último proceso completado.
+  std::string last_completed_name; //!< Nombre del último proceso completado.
+  int last_step_pid;               //!< PID del último proceso con paso de E/S.
+  std::string last_step_name; //!< Nombre del último proceso con paso de E/S.
+  int last_step_remaining;    //!< Tiempo restante del último paso.
+  int current_quantum_used;   //!< Ticks usados del quantum actual (para RR).
 
 public:
   /**

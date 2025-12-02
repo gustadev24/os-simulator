@@ -13,5 +13,12 @@ scheduling_algorithm=RoundRobin
 # Opciones: FIFO, LRU, Optimal, NRU
 page_replacement_algorithm=LRU
 
+# Algoritmo de Planificación de E/S
+# Opciones: FCFS, RoundRobin
+io_scheduling_algorithm=FCFS
+
 # Quantum para Round Robin (en unidades de tiempo)
 quantum=4
+
+# Quantum para Round Robin de E/S (en unidades de tiempo)
+io_quantum=4

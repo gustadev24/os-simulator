@@ -37,7 +37,7 @@ TEST_CASE("State Transition Metrics - Basic Logging",
     REQUIRE(j["tick"] == 0);
     REQUIRE(j["state_transitions"].is_array());
     REQUIRE(j["state_transitions"].size() >= 1);
-    auto& st = j["state_transitions"][0];
+    auto &st = j["state_transitions"][0];
     REQUIRE(st["pid"] == 1);
     REQUIRE(st["name"] == "P1");
     REQUIRE(st["from"] == "NEW");
@@ -58,7 +58,7 @@ TEST_CASE("State Transition Metrics - Basic Logging",
     json j = json::parse(line);
     REQUIRE(j["state_transitions"].is_array());
     REQUIRE(j["state_transitions"].size() >= 1);
-    auto& st = j["state_transitions"][0];
+    auto &st = j["state_transitions"][0];
     REQUIRE(st["from"] == "READY");
     REQUIRE(st["to"] == "RUNNING");
     REQUIRE(st["reason"] == "scheduled");

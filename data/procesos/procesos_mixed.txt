@@ -1,0 +1,15 @@
+# Procesos mixtos con tiempos de llegada variados
+# Caso de prueba con llegadas escalonadas
+
+P1 0 CPU(10),E/S(5),CPU(8) 2 10
+P2 0 CPU(8),E/S(4),CPU(6) 1 8
+P3 0 CPU(12),E/S(6),CPU(10) 3 12
+P4 5 CPU(6),E/S(3),CPU(5),E/S(4),CPU(7) 2 9
+P5 5 CPU(9),E/S(5),CPU(7) 1 11
+P6 10 CPU(15),E/S(4),CPU(12) 4 14
+P7 10 CPU(7),E/S(6),CPU(8),E/S(3),CPU(6) 2 10
+P8 15 CPU(11),E/S(5),CPU(9),E/S(4),CPU(8) 1 13
+P9 15 CPU(8),E/S(4),CPU(10) 3 9
+P10 20 CPU(14),E/S(6),CPU(11),E/S(5),CPU(9) 2 15
+P11 20 CPU(10),E/S(4),CPU(8) 1 11
+P12 25 CPU(12),E/S(5),CPU(10),E/S(4),CPU(8) 3 14
