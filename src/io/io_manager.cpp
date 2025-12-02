@@ -39,10 +39,11 @@ void IOManager::set_completion_callback(CompletionCallback callback) {
   }
 }
 
-void IOManager::set_metrics_collector(std::shared_ptr<MetricsCollector> collector) {
+void IOManager::set_metrics_collector(
+    std::shared_ptr<MetricsCollector> collector) {
   std::lock_guard<std::mutex> lock(manager_mutex);
   metrics_collector = collector;
-  
+
   for (auto &[name, device] : devices) {
     device->set_metrics_collector(collector);
   }
@@ -70,11 +71,23 @@ void IOManager::submit_io_request(std::shared_ptr<IORequest> request) {
 void IOManager::execute_all_devices(int quantum, int current_time) {
   std::lock_guard<std::mutex> lock(manager_mutex);
 
-  for (auto &[name, device] : devices) {
-    if (device->has_pending_requests()) {
-      device->execute_step(quantum, current_time);
+  if (quantum <= 0) {
+    for (auto &[name, device] : devices) {
+      if (device->has_pending_requests()) {
+        device->execute_step(0, current_time);
+      }
+      device->send_log_metrics(current_time);
     }
-    device->send_log_metrics(current_time);
+  } else {
+    for (int tick = 0; tick < quantum; ++tick) {
+      int tick_time = current_time + tick;
+      for (auto &[name, device] : devices) {
+        if (device->has_pending_requests()) {
+          device->execute_step(1, tick_time);
+        }
+        device->send_log_metrics(tick_time);
+      }
+    }
   }
 }
 

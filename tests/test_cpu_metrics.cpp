@@ -148,7 +148,8 @@ TEST_CASE("CPU Metrics - Summary statistics", "[metrics][cpu][summary]") {
 TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
           "[metrics][cpu][integration]") {
   std::filesystem::create_directories("data/test/resultados");
-  const std::string path = "data/test/resultados/test_cpu_fcfs_integration.jsonl";
+  const std::string path =
+      "data/test/resultados/test_cpu_fcfs_integration.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -161,7 +162,6 @@ TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
   scheduler.set_scheduler(std::make_unique<FCFSScheduler>());
   scheduler.set_metrics_collector(metrics);
 
-  // Create simple processes with CPU bursts only
   std::vector<Burst> bursts_p1 = {Burst(BurstType::CPU, 3)};
   auto p1 = std::make_shared<Process>(1, "P1", 0, bursts_p1);
 
@@ -171,14 +171,12 @@ TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
   std::vector<std::shared_ptr<Process>> processes = {p1, p2};
   scheduler.load_processes(processes);
 
-  // Run simulation
   while (scheduler.has_pending_processes()) {
     scheduler.execute_step(1);
   }
 
   metrics->flush_all();
 
-  // Log summary
   metrics->log_cpu_summary(
       scheduler.get_current_time(), scheduler.get_cpu_utilization(),
       scheduler.get_average_waiting_time(),
@@ -218,7 +216,7 @@ TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
     }
 
     REQUIRE(exec_count > 0);
-    REQUIRE(complete_count == 2); // Two processes completed
+    REQUIRE(complete_count == 2);
     REQUIRE(has_summary);
   }
 
@@ -240,7 +238,6 @@ TEST_CASE("CPU Metrics - Scheduler integration with FCFS",
       }
     }
 
-    // FCFS should execute P1 first, then P2
     REQUIRE(execution_order.size() >= 2);
     REQUIRE(execution_order[0] == 1);
     REQUIRE(execution_order[1] == 2);

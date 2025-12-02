@@ -1,0 +1,13 @@
+# Procesos con alta carga de CPU
+# Escenario de prueba para algoritmos de planificación de CPU
+
+P1 0 CPU(25),E/S(2),CPU(20) 1 15
+P2 1 CPU(30),E/S(3),CPU(25),E/S(2),CPU(18) 2 18
+P3 2 CPU(40) 1 12
+P4 3 CPU(22),E/S(4),CPU(28) 3 16
+P5 4 CPU(35),E/S(2),CPU(30),E/S(3),CPU(22) 2 20
+P6 5 CPU(45) 4 14
+P7 6 CPU(28),E/S(3),CPU(32),E/S(2),CPU(25) 1 17
+P8 7 CPU(38),E/S(4),CPU(30) 3 19
+P9 8 CPU(50) 2 13
+P10 10 CPU(32),E/S(3),CPU(28),E/S(2),CPU(35) 1 21

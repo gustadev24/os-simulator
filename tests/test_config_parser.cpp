@@ -1,7 +1,6 @@
 #include "core/config_parser.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <fstream>
-#include <memory>
 
 using namespace OSSimulator;
 

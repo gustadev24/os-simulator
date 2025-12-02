@@ -14,7 +14,8 @@
 using namespace OSSimulator;
 using json = nlohmann::json;
 
-TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]") {
+TEST_CASE("State transitions for I/O blocking are logged",
+          "[metrics][blocking]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_io_blocking.jsonl";
 
@@ -28,7 +29,7 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
   auto disk = std::make_shared<IODevice>("disk");
   disk->set_scheduler(std::make_unique<IOFCFSScheduler>());
   io_manager->add_device("disk", disk);
-  
+
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::move(scheduler));
   cpu_scheduler.set_io_manager(io_manager);
@@ -37,7 +38,8 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
   std::vector<std::shared_ptr<Process>> processes;
   processes.push_back(std::make_shared<Process>(
       1, "P1", 0,
-      std::vector<Burst>{Burst(BurstType::CPU, 2), Burst(BurstType::IO, 3, "disk"),
+      std::vector<Burst>{Burst(BurstType::CPU, 2),
+                         Burst(BurstType::IO, 3, "disk"),
                          Burst(BurstType::CPU, 2)}));
 
   cpu_scheduler.load_processes(processes);
@@ -53,7 +55,7 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
 
   std::ifstream infile(path);
   std::string line;
-  
+
   bool found_io_request = false;
   bool found_waiting_to_ready = false;
 
@@ -67,7 +69,7 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
         std::string reason = st["reason"];
         std::string to_state = st["to"];
         std::string from_state = st["from"];
-        
+
         if (reason == "io_request" && to_state == "WAITING") {
           found_io_request = true;
         }
@@ -76,13 +78,12 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
         }
       }
     }
-    
-    // Also check old format for backward compatibility
+
     if (j.contains("state_transition")) {
       std::string reason = j["state_transition"]["reason"];
       std::string to_state = j["state_transition"]["to"];
       std::string from_state = j["state_transition"]["from"];
-      
+
       if (reason == "io_request" && to_state == "WAITING") {
         found_io_request = true;
       }
@@ -96,7 +97,8 @@ TEST_CASE("State transitions for I/O blocking are logged", "[metrics][blocking]"
   REQUIRE(found_waiting_to_ready);
 }
 
-TEST_CASE("State transitions for memory blocking are logged", "[metrics][blocking]") {
+TEST_CASE("State transitions for memory blocking are logged",
+          "[metrics][blocking]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_memory_blocking.jsonl";
 
@@ -108,7 +110,7 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
   auto scheduler = std::make_unique<FCFSScheduler>();
   auto memory_manager = std::make_shared<MemoryManager>(
       4, std::make_unique<FIFOReplacement>(), 1);
-  
+
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::move(scheduler));
   cpu_scheduler.set_memory_manager(memory_manager);
@@ -117,8 +119,8 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
   std::vector<std::shared_ptr<Process>> processes;
   auto proc = std::make_shared<Process>(
       1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 5)});
-  proc->memory_required = 4;  // 4 pages
-  proc->memory_access_trace = {0, 1, 2, 3};  // Access all 4 pages
+  proc->memory_required = 4;
+  proc->memory_access_trace = {0, 1, 2, 3};
   processes.push_back(proc);
 
   cpu_scheduler.load_processes(processes);
@@ -134,7 +136,7 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
 
   std::ifstream infile(path);
   std::string line;
-  
+
   bool found_page_fault = false;
   bool found_memory_waiting_to_ready = false;
 
@@ -148,7 +150,7 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
         std::string reason = st["reason"];
         std::string to_state = st["to"];
         std::string from_state = st["from"];
-        
+
         if (reason == "page_fault" && to_state == "MEMORY_WAITING") {
           found_page_fault = true;
         }
@@ -157,13 +159,12 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
         }
       }
     }
-    
-    // Also check old format
+
     if (j.contains("state_transition")) {
       std::string reason = j["state_transition"]["reason"];
       std::string to_state = j["state_transition"]["to"];
       std::string from_state = j["state_transition"]["from"];
-      
+
       if (reason == "page_fault" && to_state == "MEMORY_WAITING") {
         found_page_fault = true;
       }
@@ -177,9 +178,11 @@ TEST_CASE("State transitions for memory blocking are logged", "[metrics][blockin
   REQUIRE(found_memory_waiting_to_ready);
 }
 
-TEST_CASE("Queue snapshots are logged after blocking events", "[metrics][blocking]") {
+TEST_CASE("Queue snapshots are logged after blocking events",
+          "[metrics][blocking]") {
   std::filesystem::create_directories("data/test/resultados");
-  const std::string path = "data/test/resultados/test_blocking_queue_snapshots.jsonl";
+  const std::string path =
+      "data/test/resultados/test_blocking_queue_snapshots.jsonl";
 
   std::filesystem::remove(path);
 
@@ -191,7 +194,7 @@ TEST_CASE("Queue snapshots are logged after blocking events", "[metrics][blockin
   auto disk = std::make_shared<IODevice>("disk");
   disk->set_scheduler(std::make_unique<IOFCFSScheduler>());
   io_manager->add_device("disk", disk);
-  
+
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::move(scheduler));
   cpu_scheduler.set_io_manager(io_manager);
@@ -200,9 +203,10 @@ TEST_CASE("Queue snapshots are logged after blocking events", "[metrics][blockin
   std::vector<std::shared_ptr<Process>> processes;
   processes.push_back(std::make_shared<Process>(
       1, "P1", 0,
-      std::vector<Burst>{Burst(BurstType::CPU, 1), Burst(BurstType::IO, 2, "disk")}));
-  processes.push_back(
-      std::make_shared<Process>(2, "P2", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
+      std::vector<Burst>{Burst(BurstType::CPU, 1),
+                         Burst(BurstType::IO, 2, "disk")}));
+  processes.push_back(std::make_shared<Process>(
+      2, "P2", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
 
   cpu_scheduler.load_processes(processes);
 
@@ -217,7 +221,7 @@ TEST_CASE("Queue snapshots are logged after blocking events", "[metrics][blockin
 
   std::ifstream infile(path);
   std::string line;
-  
+
   bool found_blocking_snapshot = false;
 
   while (std::getline(infile, line)) {

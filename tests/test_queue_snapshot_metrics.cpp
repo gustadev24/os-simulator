@@ -25,10 +25,10 @@ TEST_CASE("Queue snapshot metrics are logged correctly", "[metrics][queues]") {
   cpu_scheduler.set_metrics_collector(metrics);
 
   std::vector<std::shared_ptr<Process>> processes;
-  processes.push_back(
-      std::make_shared<Process>(1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
-  processes.push_back(
-      std::make_shared<Process>(2, "P2", 1, std::vector<Burst>{Burst(BurstType::CPU, 2)}));
+  processes.push_back(std::make_shared<Process>(
+      1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
+  processes.push_back(std::make_shared<Process>(
+      2, "P2", 1, std::vector<Burst>{Burst(BurstType::CPU, 2)}));
 
   cpu_scheduler.load_processes(processes);
 
@@ -69,7 +69,8 @@ TEST_CASE("Queue snapshot metrics are logged correctly", "[metrics][queues]") {
   REQUIRE(found_queue_snapshot);
 }
 
-TEST_CASE("Queue snapshots track process states correctly", "[metrics][queues]") {
+TEST_CASE("Queue snapshots track process states correctly",
+          "[metrics][queues]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_queue_states.jsonl";
 
@@ -84,10 +85,10 @@ TEST_CASE("Queue snapshots track process states correctly", "[metrics][queues]")
   cpu_scheduler.set_metrics_collector(metrics);
 
   std::vector<std::shared_ptr<Process>> processes;
-  processes.push_back(
-      std::make_shared<Process>(1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 5)}));
-  processes.push_back(
-      std::make_shared<Process>(2, "P2", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
+  processes.push_back(std::make_shared<Process>(
+      1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 5)}));
+  processes.push_back(std::make_shared<Process>(
+      2, "P2", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)}));
 
   cpu_scheduler.load_processes(processes);
 

@@ -12,9 +12,7 @@ CPUScheduler::CPUScheduler()
     : scheduler(nullptr), current_time(0), running_process(nullptr),
       context_switches(0), memory_check_callback(nullptr),
       simulation_running(false), metrics_collector(nullptr), total_cpu_time(0),
-      last_tick_was_idle(false) {
-  // all_processes.reserve(100);
-}
+      last_tick_was_idle(false) {}
 
 CPUScheduler::~CPUScheduler() { terminate_all_threads(); }
 
@@ -132,7 +130,6 @@ void CPUScheduler::execute_step(int quantum) {
       advance_memory_manager(1, idle_start, scheduler_lock);
       advance_io_devices(1, idle_start, scheduler_lock);
 
-      // Log CPU idle state
       send_cpu_metrics("IDLE", nullptr, false);
       last_tick_was_idle = true;
 
@@ -169,7 +166,6 @@ void CPUScheduler::execute_step(int quantum) {
   if (memory_manager) {
     if (!memory_manager->prepare_process_for_cpu(running_process,
                                                  current_time)) {
-      // Process blocked on memory - mark it inactive so pages can be evicted
       memory_manager->mark_process_inactive(*running_process);
 
       ProcessState old_state = running_process->state.load();
@@ -218,24 +214,19 @@ void CPUScheduler::execute_step(int quantum) {
   int step_start_time = current_time;
   int time_executed = running_process->execute(quantum, current_time);
 
-  // Track CPU time
   total_cpu_time += time_executed;
 
-  // Check if process will complete after this execution
   bool will_complete = running_process->is_completed();
 
-  // Determine if this will be a preemption (for RR or Priority when process not complete)
   bool will_preempt = false;
   if (!will_complete) {
     if (scheduler->get_algorithm() == SchedulingAlgorithm::ROUND_ROBIN) {
       will_preempt = true;
     } else if (scheduler->get_algorithm() == SchedulingAlgorithm::PRIORITY) {
-      // For priority scheduling, check if pending_preemption was set
       will_preempt = pending_preemption;
     }
   }
 
-  // Log CPU execution metrics BEFORE incrementing time
   if (will_complete) {
     send_cpu_metrics("COMPLETE", running_process, context_switch_occurred);
   } else if (will_preempt) {
@@ -664,7 +655,6 @@ void CPUScheduler::send_cpu_metrics(const std::string &event,
     pid = proc->pid;
     name = proc->name;
 
-    // Get remaining time from current burst
     auto *current_burst = proc->get_current_burst_mutable();
     if (current_burst && current_burst->type == BurstType::CPU) {
       remaining = current_burst->remaining_time;

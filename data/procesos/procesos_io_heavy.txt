@@ -1,0 +1,13 @@
+# Procesos con alta carga de E/S
+# Escenario de prueba para algoritmos de planificación de E/S
+
+P1 0 CPU(3),E/S(8),CPU(2),E/S(10),CPU(3),E/S(6) 1 8
+P2 1 CPU(2),E/S(12),CPU(4),E/S(8) 2 10
+P3 2 CPU(4),E/S(15),CPU(3),E/S(10),CPU(2) 1 12
+P4 3 CPU(2),E/S(6),CPU(3),E/S(8),CPU(2),E/S(10) 3 9
+P5 4 CPU(3),E/S(20),CPU(2) 2 7
+P6 5 CPU(2),E/S(7),CPU(3),E/S(9),CPU(4),E/S(5) 1 11
+P7 6 CPU(4),E/S(14),CPU(3),E/S(12),CPU(2),E/S(8) 4 14
+P8 7 CPU(3),E/S(18),CPU(2),E/S(10) 2 8
+P9 8 CPU(2),E/S(9),CPU(4),E/S(11),CPU(3),E/S(7) 3 13
+P10 9 CPU(3),E/S(16),CPU(2),E/S(12),CPU(3) 1 10

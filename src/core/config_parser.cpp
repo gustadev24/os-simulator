@@ -182,6 +182,10 @@ ConfigParser::load_simulator_config(const std::string &filename) {
         config.page_replacement_algorithm = value;
       } else if (key == "quantum") {
         config.quantum = std::stoi(value);
+      } else if (key == "io_scheduling_algorithm") {
+        config.io_scheduling_algorithm = value;
+      } else if (key == "io_quantum") {
+        config.io_quantum = std::stoi(value);
       }
     }
   }

@@ -9,6 +9,9 @@ build:
 test: build
     ./build/bin/tests
 
+test-combinations: build
+    ./build/bin/tests "[combinations]"
+
 run: build
     ./build/bin/os_simulator
 
@@ -34,3 +37,9 @@ report-bib:
 
 report-clean:
     rm -rf report/build
+
+visualize:
+    python3 -m visualization
+
+visualize-batch:
+    python3 -m visualization --batch data/resultados/ data/diagramas/batch/

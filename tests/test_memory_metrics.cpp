@@ -120,7 +120,8 @@ TEST_CASE("Memory Metrics - Integration with MemoryManager",
   auto metrics = std::make_shared<MetricsCollector>();
   REQUIRE(metrics->enable_file_output(path));
 
-  auto mm = std::make_shared<MemoryManager>(4, std::make_unique<FIFOReplacement>(), 1);
+  auto mm = std::make_shared<MemoryManager>(
+      4, std::make_unique<FIFOReplacement>(), 1);
   mm->set_metrics_collector(metrics);
 
   SECTION("Memory manager logs page faults") {

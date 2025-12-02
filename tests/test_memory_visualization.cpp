@@ -6,15 +6,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
-#include <set>
 #include <nlohmann/json.hpp>
+#include <set>
 
 using namespace OSSimulator;
 using json = nlohmann::json;
 
 TEST_CASE("Page table snapshots are logged", "[metrics][visualization]") {
   std::filesystem::create_directories("data/test/resultados");
-  const std::string path = "data/test/resultados/test_page_table_snapshot.jsonl";
+  const std::string path =
+      "data/test/resultados/test_page_table_snapshot.jsonl";
 
   std::filesystem::remove(path);
 
@@ -24,23 +25,21 @@ TEST_CASE("Page table snapshots are logged", "[metrics][visualization]") {
   auto scheduler = std::make_unique<FCFSScheduler>();
   auto memory_manager = std::make_shared<MemoryManager>(
       4, std::make_unique<FIFOReplacement>(), 1);
-  
+
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::move(scheduler));
   cpu_scheduler.set_memory_manager(memory_manager);
   cpu_scheduler.set_metrics_collector(metrics);
 
-  // Process with 2 pages
   std::vector<std::shared_ptr<Process>> processes;
   auto proc = std::make_shared<Process>(
       1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 5)});
-  proc->memory_required = 2;  // 2 pages
+  proc->memory_required = 2;
   proc->memory_access_trace = {0, 1};
   processes.push_back(proc);
 
   cpu_scheduler.load_processes(processes);
 
-  // Run simulation
   for (int i = 0; i < 10; i++) {
     cpu_scheduler.execute_step(1);
   }
@@ -67,8 +66,7 @@ TEST_CASE("Page table snapshots are logged", "[metrics][visualization]") {
       REQUIRE(j["page_table"]["pid"] == 1);
       REQUIRE(j["page_table"]["name"] == "P1");
       REQUIRE(j["page_table"]["pages"].is_array());
-      
-      // Check that page table entries have the right fields
+
       if (!j["page_table"]["pages"].empty()) {
         auto &page = j["page_table"]["pages"][0];
         REQUIRE(page.contains("page"));
@@ -82,11 +80,9 @@ TEST_CASE("Page table snapshots are logged", "[metrics][visualization]") {
     if (j.contains("frame_status")) {
       found_frame_status = true;
       REQUIRE(j["frame_status"].is_array());
-      
-      // Should have 4 frames (as configured)
+
       REQUIRE(j["frame_status"].size() == 4);
-      
-      // Check that frame entries have the right fields
+
       auto &frame = j["frame_status"][0];
       REQUIRE(frame.contains("frame"));
       REQUIRE(frame.contains("occupied"));
@@ -111,13 +107,12 @@ TEST_CASE("Frame status shows memory allocation", "[metrics][visualization]") {
   auto scheduler = std::make_unique<FCFSScheduler>();
   auto memory_manager = std::make_shared<MemoryManager>(
       3, std::make_unique<FIFOReplacement>(), 1);
-  
+
   CPUScheduler cpu_scheduler;
   cpu_scheduler.set_scheduler(std::move(scheduler));
   cpu_scheduler.set_memory_manager(memory_manager);
   cpu_scheduler.set_metrics_collector(metrics);
 
-  // Process with pages
   std::vector<std::shared_ptr<Process>> processes;
   auto proc1 = std::make_shared<Process>(
       1, "P1", 0, std::vector<Burst>{Burst(BurstType::CPU, 3)});
@@ -127,7 +122,6 @@ TEST_CASE("Frame status shows memory allocation", "[metrics][visualization]") {
 
   cpu_scheduler.load_processes(processes);
 
-  // Run simulation
   for (int i = 0; i < 10; i++) {
     cpu_scheduler.execute_step(1);
   }
@@ -139,9 +133,9 @@ TEST_CASE("Frame status shows memory allocation", "[metrics][visualization]") {
 
   std::ifstream infile(path);
   std::string line;
-  
+
   bool found_occupied_frame = false;
-  
+
   while (std::getline(infile, line)) {
     if (line.empty())
       continue;
@@ -151,7 +145,7 @@ TEST_CASE("Frame status shows memory allocation", "[metrics][visualization]") {
       for (const auto &frame : j["frame_status"]) {
         if (frame["occupied"] && frame["pid"] == 1) {
           found_occupied_frame = true;
-          // Verify the frame has valid data
+
           REQUIRE(frame["frame"] >= 0);
           REQUIRE(frame["page"] >= 0);
         }
@@ -159,6 +153,5 @@ TEST_CASE("Frame status shows memory allocation", "[metrics][visualization]") {
     }
   }
 
-  // Verify we logged at least one occupied frame for the process
   REQUIRE(found_occupied_frame);
 }

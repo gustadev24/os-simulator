@@ -185,10 +185,11 @@ TEST_CASE("IO Device with FCFS scheduling", "[io][device]") {
   int completed_count = 0;
   int last_completion_time = 0;
 
-  device.set_completion_callback([&](std::shared_ptr<Process> /*proc*/, int time) {
-    completed_count++;
-    last_completion_time = time;
-  });
+  device.set_completion_callback(
+      [&](std::shared_ptr<Process> /*proc*/, int time) {
+        completed_count++;
+        last_completion_time = time;
+      });
 
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
   auto req1 =
@@ -209,8 +210,8 @@ TEST_CASE("IO Device with Round Robin scheduling", "[io][device][rr]") {
   device.set_scheduler(std::make_unique<IORoundRobinScheduler>(4));
 
   int completed_count = 0;
-  device.set_completion_callback(
-      [&](std::shared_ptr<Process> /*proc*/, int /*time*/) { completed_count++; });
+  device.set_completion_callback([&](std::shared_ptr<Process> /*proc*/,
+                                     int /*time*/) { completed_count++; });
 
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
   auto proc2 = std::make_shared<Process>(2, "P2", 1, 8);
@@ -268,8 +269,8 @@ TEST_CASE("IO Manager with multiple devices", "[io][manager]") {
   REQUIRE_FALSE(manager.has_device("network"));
 
   int completed_count = 0;
-  manager.set_completion_callback(
-      [&](std::shared_ptr<Process> /*proc*/, int /*time*/) { completed_count++; });
+  manager.set_completion_callback([&](std::shared_ptr<Process> /*proc*/,
+                                      int /*time*/) { completed_count++; });
 
   auto proc1 = std::make_shared<Process>(1, "P1", 0, 10);
   auto req1 =

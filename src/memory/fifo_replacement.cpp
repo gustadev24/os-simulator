@@ -6,14 +6,13 @@ namespace OSSimulator {
 
 int FIFOReplacement::select_victim(
     const std::vector<Frame> &frames,
-    const std::unordered_map<int, std::shared_ptr<Process>> &/*process_map*/,
+    const std::unordered_map<int, std::shared_ptr<Process>> & /*process_map*/,
     int /*current_time*/) {
   if (fifo_queue.empty())
     return -1;
 
-  // FIFO simply returns the oldest frame (front of queue)
   int candidate = fifo_queue.front();
-  
+
   if (candidate >= 0 && candidate < static_cast<int>(frames.size())) {
     const Frame &frame = frames[candidate];
     if (frame.occupied) {
