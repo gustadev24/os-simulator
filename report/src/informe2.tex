@@ -74,13 +74,65 @@
 
 Referencia al azar \cite{amstyle}.
 
-Los sistemas operativos son responsables de gestionar los recursos de hardware y proporcionar servicios a las aplicaciones que se ejecutan sobre ellos. Entre las funciones principales de un sistema operativo se encuentran la planificación de procesos para el uso del procesador, la administración de memoria para la asignación de espacio a los programas, y la coordinación de operaciones de E/S con dispositivos periféricos. La interacción entre estos tres subsistemas determina en gran medida el rendimiento del sistema.
+Los sistemas operativos [1] son responsables de gestionar los recursos de hardware y proporcionar servicios a las aplicaciones que se ejecutan sobre ellos. Entre las funciones principales de un sistema operativo se encuentran la planificación de procesos para el uso del procesador, la administración de memoria para la asignación de espacio a los programas, y la coordinación de operaciones de entrada/salida (E/S) con dispositivos periféricos. La interacción entre estos tres subsistemas determina en gran medida el rendimiento del sistema.
 
 El desarrollo de simuladores permite estudiar el comportamiento de estos mecanismos sin requerir acceso a hardware dedicado. Un simulador puede ejecutar diferentes configuraciones de algoritmos y cargas de trabajo, facilitando la comparación de estrategias de planificación y gestión de recursos. Esta capacidad resulta valiosa tanto para fines educativos como para la investigación de nuevas políticas de administración.
 
-Este trabajo presenta un simulador que reproduce el comportamiento de los tres subsistemas mencionados. El componente de planificación de CPU implementa los algoritmos First Come First Served (FCFS), Shortest Job First (SJF), Round Robin y planificación por prioridad. El administrador de memoria utiliza paginación con algoritmos de reemplazo First In First Out (FIFO), Least Recently Used (LRU), Not Recently Used (NRU) y el algoritmo óptimo. El planificador de E/S soporta FCFS y Round Robin. Cada proceso se ejecuta en un hilo independiente, lo que replica el comportamiento concurrente de un sistema operativo.
+Este trabajo presenta un simulador que reproduce el comportamiento de los tres subsistemas mencionados. El componente de planificación de unidad central de procesamiento (CPU) implementa los algoritmos First Come First Served (FCFS), Shortest Job First (SJF), Round Robin y planificación por prioridad. El administrador de memoria utiliza paginación con algoritmos de reemplazo First In First Out (FIFO), Least Recently Used (LRU), Not Recently Used (NRU) y el algoritmo óptimo. El planificador de E/S soporta FCFS y Round Robin. Cada proceso se ejecuta en un hilo independiente, lo que replica el comportamiento concurrente de un sistema operativo.
 
-El documento se organiza de la siguiente manera: la Sección II describe la metodología empleada, incluyendo la arquitectura del sistema, los detalles de implementación y los algoritmos utilizados; la Sección III presenta los resultados experimentales; y la Sección IV expone las conclusiones del trabajo.
+El documento se organiza de la siguiente manera: la Sección II presenta los conceptos teóricos fundamentales; la Sección III describe las herramientas utilizadas; la Sección IV detalla la metodología, incluyendo arquitectura, implementación y algoritmos; la Sección V muestra los resultados experimentales; y la Sección VI expone las conclusiones.
+
+\section{Revisión de la literatura}
+
+Esta sección presenta los conceptos teóricos necesarios para comprender el funcionamiento del simulador desarrollado.
+
+\subsection{Sistemas operativos y procesos}
+
+Un sistema operativo es el software que actúa como intermediario entre el usuario y el hardware de la computadora [1]. Sus funciones principales incluyen la gestión de recursos, la provisión de una interfaz de usuario y la ejecución de programas de aplicación.
+
+Un proceso es un programa en ejecución que incluye el código del programa, su actividad actual representada por el contador de programa, el contenido de los registros del procesador, y una sección de datos con variables globales [2]. Los procesos atraviesan diferentes estados durante su ciclo de vida: nuevo, listo, en ejecución, en espera y terminado.
+
+\subsection{Planificación de CPU}
+
+La planificación de CPU [3] es el mecanismo mediante el cual el sistema operativo decide qué proceso utilizará el procesador en cada momento. Los algoritmos de planificación se clasifican en apropiativos, que permiten interrumpir un proceso en ejecución, y no apropiativos, que permiten que un proceso se ejecute hasta que termine o se bloquee voluntariamente.
+
+El algoritmo FCFS [4] atiende los procesos en el orden en que llegan a la cola de listos. SJF [5] selecciona el proceso con la ráfaga de CPU más corta. Round Robin [6] asigna un intervalo de tiempo fijo llamado quantum [16] a cada proceso de forma cíclica. La planificación por prioridad [7] asigna el procesador al proceso con mayor prioridad.
+
+\subsection{Memoria virtual y paginación}
+
+La memoria virtual [8] es una técnica que permite ejecutar procesos cuyo tamaño excede la memoria física disponible. El sistema mantiene en memoria principal solo las porciones del proceso que se están utilizando, mientras el resto permanece en almacenamiento secundario.
+
+La paginación [9] divide el espacio de direcciones lógicas en bloques de tamaño fijo llamados páginas, que se mapean a bloques físicos denominados marcos. Cuando un proceso accede a una página que no está en memoria, ocurre un fallo de página [10], y el sistema debe cargarla desde el almacenamiento secundario.
+
+Los algoritmos de reemplazo determinan qué página desalojar cuando la memoria está llena. FIFO [11] reemplaza la página más antigua. LRU [12] reemplaza la página que no ha sido utilizada durante más tiempo. NRU [13] clasifica las páginas según sus bits de referencia y modificación. El algoritmo óptimo [14] reemplaza la página que no se usará por más tiempo en el futuro.
+
+\subsection{Gestión de entrada/salida}
+
+La gestión de E/S [15] coordina las operaciones de acceso a dispositivos periféricos. Las operaciones de E/S son considerablemente más lentas que las operaciones de CPU, por lo que los procesos se bloquean mientras esperan la finalización de estas operaciones. Los algoritmos de planificación de E/S determinan el orden en que se atienden las solicitudes pendientes.
+
+\subsection{Concurrencia y sincronización}
+
+La concurrencia [17] permite que múltiples procesos o hilos progresen simultáneamente. Cuando varios hilos acceden a recursos compartidos, se requieren mecanismos de sincronización para mantener la consistencia de los datos.
+
+Un mutex [18] es un mecanismo de exclusión mutua que permite que solo un hilo acceda a una sección de código a la vez. Las variables de condición [19] permiten que los hilos esperen hasta que se cumpla una condición específica. La inanición [20] es una situación en la que un proceso nunca obtiene los recursos que necesita para continuar su ejecución.
+
+\section{Herramientas utilizadas}
+
+Además de C++ [28] y Python [29], que fueron los lenguajes de programación principales del proyecto, se utilizaron las siguientes herramientas para el desarrollo, compilación, pruebas y documentación del sistema.
+
+CMake [21] es un sistema de construcción multiplataforma que genera archivos de configuración para diferentes entornos de compilación. En este proyecto se utilizó para gestionar las dependencias y configurar el proceso de compilación del simulador.
+
+Ninja [22] es un sistema de compilación diseñado para ejecutar compilaciones de manera eficiente. Se empleó como backend de CMake para acelerar el proceso de compilación incremental durante el desarrollo.
+
+Catch2 [23] es un framework de pruebas unitarias para C++. Se utilizó para implementar y ejecutar las pruebas que verifican el correcto funcionamiento de los algoritmos de planificación y reemplazo de páginas.
+
+Just [24] es un ejecutor de comandos que permite definir tareas frecuentes en un archivo de configuración. Se empleó para automatizar operaciones comunes como compilación, ejecución de pruebas y generación de documentación.
+
+Seaborn [25] es una biblioteca de visualización estadística para Python basada en Matplotlib. Se utilizó en el módulo de visualización para generar los diagramas de Gantt [31], gráficos de evolución de colas y otras representaciones del comportamiento del sistema.
+
+Doxygen [26] es un generador de documentación que extrae información de los comentarios del código fuente. Se empleó para generar la documentación técnica del proyecto en formatos HTML y PDF.
+
+LaTeX [27] es un sistema de composición tipográfica orientado a la creación de documentos técnicos y científicos. Se utilizó para la redacción de este informe siguiendo el formato IEEE.
 
 \section{Metodología}
 
@@ -88,7 +140,7 @@ Esta sección describe el diseño del simulador, los detalles de implementación
 
 \subsection{Arquitectura del sistema}
 
-El sistema se compone de dos módulos principales: un simulador desarrollado en C++17 y un visualizador implementado en Python. El simulador ejecuta la lógica del sistema operativo, mientras que el visualizador procesa los datos generados para producir gráficos que facilitan el análisis del comportamiento.
+El sistema se compone de dos módulos principales: un simulador desarrollado en C++17 [28] y un visualizador implementado en Python [29]. El simulador ejecuta la lógica del sistema operativo, mientras que el visualizador procesa los datos generados para producir gráficos que facilitan el análisis del comportamiento.
 
 \begin{figure}[htbp]
     \centering
@@ -97,13 +149,13 @@ El sistema se compone de dos módulos principales: un simulador desarrollado en 
     \label{fig:arquitectura}
 \end{figure}
 
-El simulador se subdivide en cinco componentes. El módulo Core contiene las clases fundamentales que representan procesos y ráfagas de ejecución. El módulo CPU implementa el planificador central y los algoritmos de selección de procesos. El módulo IO gestiona los dispositivos de E/S y sus planificadores. El módulo Memory administra los marcos físicos y los algoritmos de reemplazo de páginas. El módulo Metrics recopila eventos durante la simulación para su posterior análisis.
+El simulador se subdivide en cinco componentes, como se ilustra en la Figura \ref{fig:arquitectura}. El módulo Core contiene las clases fundamentales que representan procesos y ráfagas de ejecución. El módulo CPU implementa el planificador central y los algoritmos de selección de procesos. El módulo IO gestiona los dispositivos de E/S y sus planificadores. El módulo Memory administra los marcos físicos y los algoritmos de reemplazo de páginas. El módulo Metrics recopila eventos durante la simulación para su posterior análisis.
 
-El visualizador procesa archivos en formato JavaScript Object Notation Lines (JSONL) generados por el simulador. Cada generador especializado produce un tipo de gráfico: diagramas de Gantt para CPU y E/S, evolución temporal de las colas de procesos, uso de memoria, estado de las tablas de páginas, asignación de marcos físicos, cambios de contexto y distribución de estados.
+El visualizador procesa archivos en formato JavaScript Object Notation Lines (JSONL) [30] generados por el simulador. Cada generador especializado produce un tipo de gráfico: diagramas de Gantt [31] para CPU y E/S, evolución temporal de las colas de procesos, uso de memoria, estado de las tablas de páginas, asignación de marcos físicos, cambios de contexto y distribución de estados.
 
 \subsection{Modelo de procesos}
 
-Un proceso en el simulador se define mediante su identificador, tiempo de llegada, secuencia de ráfagas, prioridad y número de páginas requeridas. La secuencia de ráfagas alterna entre períodos de uso de CPU y operaciones de E/S. Cada proceso atraviesa seis estados durante su ciclo de vida: nuevo, listo, en espera de memoria, en ejecución, bloqueado por E/S y terminado.
+Un proceso [2] en el simulador se define mediante su identificador, tiempo de llegada, secuencia de ráfagas, prioridad y número de páginas requeridas. La secuencia de ráfagas alterna entre períodos de uso de CPU y operaciones de E/S. Cada proceso atraviesa seis estados durante su ciclo de vida: nuevo, listo, en espera de memoria, en ejecución, bloqueado por E/S y terminado.
 
 \begin{figure}[htbp]
     \centering
@@ -112,13 +164,13 @@ Un proceso en el simulador se define mediante su identificador, tiempo de llegad
     \label{fig:estados}
 \end{figure}
 
-Cuando un proceso llega al sistema, se encuentra en estado nuevo. El planificador lo mueve a la cola de listos cuando corresponde según su tiempo de llegada. Al ser seleccionado para ejecución, el administrador de memoria verifica que sus páginas estén cargadas. Si alguna página no está presente, el proceso pasa a estado de espera de memoria hasta que el fallo se resuelva. Una vez cargadas las páginas, el proceso entra en ejecución y consume su ráfaga de CPU. Si la ráfaga siguiente es de E/S, el proceso se bloquea hasta que la operación complete. Al finalizar todas sus ráfagas, el proceso termina.
+La Figura \ref{fig:estados} muestra las transiciones entre estados. Cuando un proceso llega al sistema, se encuentra en estado nuevo. El planificador lo mueve a la cola de listos cuando corresponde según su tiempo de llegada. Al ser seleccionado para ejecución, el administrador de memoria verifica que sus páginas estén cargadas. Si alguna página no está presente, el proceso pasa a estado de espera de memoria hasta que el fallo se resuelva. Una vez cargadas las páginas, el proceso entra en ejecución y consume su ráfaga de CPU. Si la ráfaga siguiente es de E/S, el proceso se bloquea hasta que la operación complete. Al finalizar todas sus ráfagas, el proceso termina.
 
 \subsection{Flujo de ejecución}
 
 El simulador avanza mediante un reloj virtual discreto. En cada unidad de tiempo, denominada tick, se ejecuta una secuencia de operaciones coordinadas. Primero se verifican las llegadas de nuevos procesos según los tiempos definidos en el archivo de entrada. Luego el planificador de CPU selecciona el siguiente proceso a ejecutar de acuerdo con el algoritmo configurado. Si el proceso seleccionado requiere páginas que no están en memoria, se encola una solicitud de carga y el proceso se bloquea.
 
-El administrador de memoria resuelve un fallo de página por tick. Cuando todas las páginas de un proceso están cargadas, este puede continuar su ejecución. Durante la ejecución, el proceso consume una unidad de tiempo de su ráfaga actual. Si completa una ráfaga de CPU y la siguiente es de E/S, se envía una solicitud al planificador de E/S y el proceso se bloquea. El planificador de E/S atiende las solicitudes según su algoritmo configurado. Al completar una operación de E/S, el proceso regresa a la cola de listos.
+El administrador de memoria resuelve un fallo de página por tick. Cuando todas las páginas de un proceso están cargadas, este puede continuar su ejecución. Durante la ejecución, el proceso consume una unidad de tiempo de su ráfaga actual. Si completa una ráfaga de CPU y la siguiente es de E/S, se envía una solicitud al planificador de E/S y el proceso se bloquea. El planificador de E/S atiende las solicitudes según su algoritmo configurado. Al completar una operación de E/S, el proceso regresa a la cola de listos. La Figura \ref{fig:flujo} ilustra este proceso.
 
 \begin{figure}[htbp]
     \centering
@@ -131,21 +183,21 @@ El administrador de memoria resuelve un fallo de página por tick. Cuando todas 
 
 Cada proceso se ejecuta en un hilo independiente para replicar el comportamiento concurrente de un sistema operativo. Esta decisión de diseño introduce la necesidad de mecanismos de sincronización para mantener la consistencia del estado global.
 
-El simulador utiliza una función central protegida por un mutex que coordina la ejecución. Esta función avanza el reloj virtual, notifica al proceso activo que puede ejecutar su porción de trabajo y espera mediante una variable de condición hasta que el proceso señale que completó su tick. Posteriormente, la función actualiza los módulos de memoria y E/S, y registra los eventos correspondientes en el colector de métricas.
+El simulador utiliza una función central protegida por un mutex [18] que coordina la ejecución. Esta función avanza el reloj virtual, notifica al proceso activo que puede ejecutar su porción de trabajo y espera mediante una variable de condición [19] hasta que el proceso señale que completó su tick. Posteriormente, la función actualiza los módulos de memoria y E/S, y registra los eventos correspondientes en el colector de métricas.
 
 Las variables compartidas entre hilos utilizan tipos atómicos de C++ cuando las operaciones son simples lecturas o escrituras. Para operaciones más complejas que requieren consistencia entre múltiples variables, se emplean secciones protegidas por mutex.
 
 \subsection{Prevención de inanición por memoria}
 
-Un problema que puede surgir durante la simulación es la inanición de un proceso que espera cargar sus páginas en memoria. Cuando un proceso es seleccionado para ejecución, el administrador de memoria intenta cargar sus páginas. Si no hay marcos disponibles, el algoritmo de reemplazo selecciona páginas víctima. Sin embargo, mientras el proceso espera, el planificador puede seleccionar otro proceso, cuyas páginas podrían reemplazar las que el primer proceso acaba de cargar.
+Un problema que puede surgir durante la simulación es la inanición [20] de un proceso que espera cargar sus páginas en memoria. Cuando un proceso es seleccionado para ejecución, el administrador de memoria intenta cargar sus páginas. Si no hay marcos disponibles, el algoritmo de reemplazo selecciona páginas víctima. Sin embargo, mientras el proceso espera, el planificador puede seleccionar otro proceso, cuyas páginas podrían reemplazar las que el primer proceso acaba de cargar.
 
 Para evitar este escenario, el simulador implementa un mecanismo basado en el bit de referencia. Cuando las páginas de un proceso se cargan en preparación para su ejecución, se marcan como protegidas. Estas páginas no pueden ser seleccionadas como víctimas hasta que el proceso termine su ráfaga actual, ya sea por completar su tiempo de CPU, por un bloqueo de E/S o por preempción en algoritmos apropiativos. Una vez que el proceso sale del estado de ejecución, sus páginas se desprotegen y quedan disponibles para reemplazo.
 
 \subsection{Algoritmos de planificación de CPU}
 
-El simulador implementa cuatro algoritmos de planificación de CPU. FCFS atiende los procesos en el orden en que llegan a la cola de listos. Este algoritmo no es apropiativo, por lo que un proceso en ejecución continúa hasta completar su ráfaga. SJF selecciona el proceso cuya próxima ráfaga de CPU sea la más corta. En la implementación actual, SJF tampoco es apropiativo.
+El simulador implementa cuatro algoritmos de planificación de CPU [3]. FCFS [4] atiende los procesos en el orden en que llegan a la cola de listos. Este algoritmo no es apropiativo, por lo que un proceso en ejecución continúa hasta completar su ráfaga. SJF [5] selecciona el proceso cuya próxima ráfaga de CPU sea la más corta. En la implementación actual, SJF tampoco es apropiativo.
 
-Round Robin asigna a cada proceso un intervalo de tiempo fijo denominado quantum. Cuando un proceso agota su quantum sin completar su ráfaga, es preemptado y reinsertado al final de la cola de listos. El planificador por prioridad selecciona el proceso con mayor prioridad, representada por el menor valor numérico. Este algoritmo es apropiativo: si llega un proceso con mayor prioridad que el actual, se produce una preempción.
+Round Robin [6] asigna a cada proceso un intervalo de tiempo fijo denominado quantum [16]. Cuando un proceso agota su quantum sin completar su ráfaga, es preemptado y reinsertado al final de la cola de listos. El planificador por prioridad [7] selecciona el proceso con mayor prioridad, representada por el menor valor numérico. Este algoritmo es apropiativo: si llega un proceso con mayor prioridad que el actual, se produce una preempción. La Tabla \ref{tab:cpu_algorithms} resume las características de cada algoritmo.
 
 \begin{table}[htbp]
     \centering
@@ -153,11 +205,11 @@ Round Robin asigna a cada proceso un intervalo de tiempo fijo denominado quantum
     \label{tab:cpu_algorithms}
     \begin{tabular}{lcc}
         \toprule
-        Algoritmo    & Criterio de selección & Apropiativo \\
+        Algoritmo     & Criterio de selección & Apropiativo \\
         \midrule
-        FCFS         & Orden de llegada      & No          \\
-        SJF          & Menor ráfaga          & No          \\
-        Round Robin  & Turno con quantum     & Sí          \\
+        FCFS          & Orden de llegada      & No          \\
+        SJF           & Menor ráfaga          & No          \\
+        Round Robin   & Turno con quantum     & Sí          \\
         Por prioridad & Mayor prioridad       & Sí          \\
         \bottomrule
     \end{tabular}
@@ -165,11 +217,11 @@ Round Robin asigna a cada proceso un intervalo de tiempo fijo denominado quantum
 
 \subsection{Algoritmos de reemplazo de páginas}
 
-El administrador de memoria implementa cuatro algoritmos de reemplazo. FIFO mantiene un registro del orden de llegada de las páginas a memoria y selecciona la más antigua para reemplazo. LRU registra el último acceso a cada página y selecciona aquella que no ha sido utilizada durante más tiempo.
+El administrador de memoria implementa cuatro algoritmos de reemplazo. FIFO [11] mantiene un registro del orden de llegada de las páginas a memoria y selecciona la más antigua para reemplazo. LRU [12] registra el último acceso a cada página y selecciona aquella que no ha sido utilizada durante más tiempo.
 
-NRU clasifica las páginas según sus bits de referencia y modificación. En la implementación actual, dado que la simulación no contempla modificaciones a memoria, efectivamente solo existen dos categorías: páginas referenciadas y no referenciadas. El algoritmo selecciona una página de la categoría más baja disponible.
+NRU [13] clasifica las páginas según sus bits de referencia y modificación. En la implementación actual, dado que la simulación no contempla modificaciones a memoria, efectivamente solo existen dos categorías: páginas referenciadas y no referenciadas. El algoritmo selecciona una página de la categoría más baja disponible.
 
-El algoritmo óptimo requiere conocimiento del futuro, lo cual no está disponible en sistemas reales. La implementación utiliza una heurística que aproxima este comportamiento: primero considera como víctimas las páginas de procesos terminados, luego las de procesos bloqueados por E/S ordenados por tiempo restante de mayor a menor, y finalmente cualquier página que no esté protegida.
+El algoritmo óptimo [14] tradicionalmente selecciona la página que no será accedida durante más tiempo en el futuro. En sistemas reales, esta información no está disponible. En el simulador desarrollado, aunque se conoce la secuencia futura de ráfagas, no se simulan accesos individuales a páginas de memoria, ya que los requerimientos establecen que un proceso necesita todas sus páginas cargadas para ejecutarse. Por lo tanto, el algoritmo óptimo no puede evaluar accesos futuros a páginas específicas. La implementación utiliza una heurística que aproxima este comportamiento: primero considera como víctimas las páginas de procesos terminados, luego las de procesos bloqueados por E/S ordenados por tiempo restante de mayor a menor, y finalmente cualquier página que no esté protegida. La Tabla \ref{tab:replacement_algorithms} resume los algoritmos implementados.
 
 \begin{table}[htbp]
     \centering
@@ -177,19 +229,19 @@ El algoritmo óptimo requiere conocimiento del futuro, lo cual no está disponib
     \label{tab:replacement_algorithms}
     \begin{tabular}{lp{5.5cm}}
         \toprule
-        Algoritmo & Criterio de selección                             \\
+        Algoritmo & Criterio de selección                              \\
         \midrule
-        FIFO      & Página con mayor tiempo en memoria                \\
-        LRU       & Página no accedida por más tiempo                 \\
+        FIFO      & Página con mayor tiempo en memoria                 \\
+        LRU       & Página no accedida por más tiempo                  \\
         NRU       & Página con menor categoría según bit de referencia \\
-        Óptimo    & Heurística basada en estado de procesos           \\
+        Óptimo    & Heurística basada en estado de procesos            \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \subsection{Planificación de E/S}
 
-El módulo de E/S gestiona las solicitudes de acceso a dispositivos periféricos. La implementación actual utiliza un único dispositivo denominado disco. Cuando un proceso completa una ráfaga de CPU y su siguiente ráfaga es de E/S, se genera una solicitud que se encola en el planificador del dispositivo.
+El módulo de E/S [15] gestiona las solicitudes de acceso a dispositivos periféricos. La implementación actual utiliza un único dispositivo denominado disco. Cuando un proceso completa una ráfaga de CPU y su siguiente ráfaga es de E/S, se genera una solicitud que se encola en el planificador del dispositivo.
 
 Los algoritmos disponibles son FCFS y Round Robin, con funcionamiento análogo a sus contrapartes de CPU. En FCFS, las solicitudes se atienden en orden de llegada y cada operación se completa antes de comenzar la siguiente. En Round Robin, cada solicitud recibe un quantum de tiempo configurable; si no completa en ese intervalo, se reencola y se atiende la siguiente solicitud pendiente.
 
@@ -206,7 +258,7 @@ El módulo de métricas registra eventos durante toda la simulación. Los evento
     \label{fig:colas}
 \end{figure}
 
-El visualizador en Python lee estos archivos y genera gráficos mediante la biblioteca Seaborn. Los diagramas de Gantt muestran la asignación temporal de CPU y dispositivos de E/S a los procesos. Los gráficos de evolución de colas, como el ilustrado en la Figura \ref{fig:colas}, muestran cómo cambia la cantidad de procesos en cada estado a lo largo del tiempo. Los mapas de memoria presentan la asignación de marcos físicos a las páginas de cada proceso.
+El visualizador en Python lee estos archivos y genera gráficos mediante la biblioteca Seaborn [25]. Los diagramas de Gantt, como el mostrado en la Figura \ref{fig:gantt}, presentan la asignación temporal de CPU y dispositivos de E/S a los procesos. Los gráficos de evolución de colas, como el ilustrado en la Figura \ref{fig:colas}, muestran cómo cambia la cantidad de procesos en cada estado a lo largo del tiempo. Los mapas de memoria presentan la asignación de marcos físicos a las páginas de cada proceso.
 
 \begin{figure}[htbp]
     \centering
@@ -244,13 +296,67 @@ El Listado \ref{lst:procesos} ilustra la definición de tres procesos. El proces
 
 El simulador se ejecuta desde la terminal y acepta parámetros para especificar los archivos de entrada y salida. La opción -f indica el archivo de procesos, -c el archivo de configuración y -m el archivo donde se guardarán las métricas. El visualizador se invoca como un módulo de Python y soporta procesamiento individual de archivos o por lotes de un directorio completo.
 
-El proyecto incluye pruebas unitarias implementadas con la biblioteca Catch2 que verifican el correcto funcionamiento de los algoritmos de planificación y reemplazo. La documentación del código se genera mediante Doxygen y está disponible en formato HTML y PDF. El código fuente del proyecto se encuentra disponible en un repositorio público de GitHub.
+El proyecto incluye pruebas unitarias implementadas con la biblioteca Catch2 [23] que verifican el correcto funcionamiento de los algoritmos de planificación y reemplazo. La documentación del código se genera mediante Doxygen [26] y está disponible en formato HTML y PDF. El código fuente del proyecto se encuentra disponible en el repositorio https://github.com/gustadev24/os-simulator, donde el archivo README contiene instrucciones detalladas sobre instalación, compilación, ejecución y generación de documentación.
 
 \section{Resultados}
-\subsection{Casos de prueba}
-% Pendiente: describir los casos de prueba utilizados
-\subsection{Análisis de resultados}
-% Pendiente: análisis de los resultados obtenidos
+
+Para evaluar el comportamiento del simulador se diseñaron cuatro casos de prueba que representan diferentes escenarios de carga. Cada caso utiliza una configuración específica de procesos y parámetros del sistema. Los resultados se analizaron mediante los diagramas de Gantt y gráficos de uso de memoria generados por el visualizador.
+
+\subsection{Caso base: carga estándar}
+
+El primer caso representa una carga de trabajo típica con 10 procesos que llegan de forma escalonada. Cada proceso ejecuta ráfagas de CPU de duración moderada intercaladas con operaciones de E/S. La configuración utiliza Round Robin con quantum de 4 unidades, LRU para reemplazo de páginas y 64 marcos de memoria disponibles.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{gantt_base.png}
+    \caption{Diagrama de Gantt del caso base mostrando la ejecución de 10 procesos con carga estándar.}
+    \label{fig:gantt_base}
+\end{figure}
+
+La Figura \ref{fig:gantt_base} muestra la ejecución de este escenario. Se observa una distribución equitativa del tiempo de CPU entre los procesos gracias al algoritmo Round Robin. Los períodos de bloqueo por E/S son visibles como interrupciones en la ejecución de cada proceso. El sistema completa todos los procesos en 75 ticks, con una utilización eficiente del procesador.
+
+\subsection{Caso de concurrencia: muchos procesos con ráfagas cortas}
+
+Este caso evalúa el comportamiento del sistema bajo alta concurrencia. Se ejecutan 20 procesos con ráfagas de CPU cortas, entre 1 y 3 unidades de tiempo. El quantum se reduce a 2 unidades para permitir mayor intercalación, y se utiliza FIFO para reemplazo de páginas.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{gantt_concurrence.png}
+    \caption{Diagrama de Gantt del caso de concurrencia con 20 procesos y ráfagas cortas.}
+    \label{fig:gantt_concurrence}
+\end{figure}
+
+La Figura \ref{fig:gantt_concurrence} ilustra la ejecución concurrente. El diagrama muestra una alta frecuencia de cambios de contexto debido al quantum reducido y la cantidad de procesos. A pesar de la sobrecarga de cambios de contexto, el sistema logra completar todos los procesos en 50 ticks, lo que indica una gestión eficiente de las colas de procesos listos.
+
+\subsection{Caso CPU intensivo: pocos procesos con ráfagas largas}
+
+El tercer caso representa cargas de trabajo intensivas en CPU. Se ejecutan 5 procesos con ráfagas de CPU prolongadas, entre 10 y 25 unidades de tiempo. El quantum se incrementa a 8 unidades para reducir la sobrecarga de cambios de contexto.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{gantt_cpu.png}
+    \caption{Diagrama de Gantt del caso CPU intensivo con 5 procesos y ráfagas largas.}
+    \label{fig:gantt_cpu}
+\end{figure}
+
+La Figura \ref{fig:gantt_cpu} presenta la ejecución de este escenario. Los bloques de ejecución son más extensos debido al quantum mayor, lo que reduce la fragmentación del tiempo de CPU. El proceso P5, con una ráfaga de 25 unidades, domina una porción significativa de la línea de tiempo. El tiempo total de simulación es de 129 ticks, reflejando la naturaleza prolongada de las ráfagas.
+
+\subsection{Caso de escasez de memoria}
+
+El cuarto caso evalúa el comportamiento del sistema cuando la memoria física es insuficiente para alojar todas las páginas de los procesos activos. Se ejecutan 6 procesos que requieren 8 páginas cada uno, con solo 24 marcos de memoria disponibles.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{gantt_ram.png}
+    \caption{Diagrama de Gantt del caso de escasez de memoria mostrando bloqueos por fallos de página.}
+    \label{fig:gantt_ram}
+\end{figure}
+
+La Figura \ref{fig:gantt_ram} muestra los resultados de este escenario. El diagrama de Gantt presenta períodos de espera por memoria visibles entre las ejecuciones.  El algoritmo LRU selecciona las víctimas de manera efectiva, permitiendo que todos los procesos completen su ejecución en 64 ticks a pesar de la restricción de memoria.
+
+\subsection{Análisis comparativo}
+
+Los cuatro casos demuestran la capacidad del simulador para manejar diferentes escenarios de carga. El caso base establece un punto de referencia con comportamiento equilibrado. El caso de concurrencia muestra que el sistema escala adecuadamente con mayor cantidad de procesos. El caso CPU intensivo valida el funcionamiento correcto con ráfagas prolongadas. El caso de escasez de memoria confirma que los algoritmos de reemplazo funcionan correctamente bajo presión de memoria, y que el mecanismo de protección de páginas previene la inanición.
 
 \section{Conclusiones}
 
@@ -258,11 +364,11 @@ El desarrollo de este simulador permitió integrar los conceptos de planificaci�
 
 La implementación de procesos como hilos independientes introduce la complejidad de la sincronización concurrente, pero replica de manera más fiel el comportamiento de un sistema operativo real. El uso de mutex y variables de condición garantiza la consistencia del estado global mientras permite que múltiples procesos existan simultáneamente en memoria. El mecanismo de protección mediante el bit de referencia demostró ser efectivo para prevenir situaciones de inanición cuando un proceso espera la carga de sus páginas en memoria.
 
-La integración entre los módulos de CPU, memoria y E/S requiere una coordinación cuidadosa para mantener la coherencia del sistema. El diseño centralizado del planificador de CPU como coordinador principal simplifica esta tarea al concentrar las decisiones de estado en un único punto de control. Esta aproximación facilita el debugging y la extensión del sistema.
+Los resultados experimentales validaron el correcto funcionamiento del simulador bajo diferentes escenarios de carga. El caso de escasez de memoria demostró que los algoritmos de reemplazo operan correctamente cuando los recursos son limitados. El caso de alta concurrencia confirmó la estabilidad del sistema con múltiples procesos activos simultáneamente.
 
 El módulo de visualización complementa al simulador proporcionando representaciones gráficas que facilitan la comprensión del comportamiento del sistema. Los diagramas de Gantt y las gráficas de evolución de colas permiten identificar patrones de ejecución y posibles cuellos de botella. El formato JSONL para la exportación de métricas permite el procesamiento flexible de los datos con herramientas externas.
 
-Como trabajo futuro, se propone extender el simulador para soportar múltiples dispositivos de E/S con diferentes latencias, implementar algoritmos de planificación multinivel con retroalimentación, e incorporar métricas adicionales que permitan analizar la localidad de referencia de los accesos a memoria. También sería interesante agregar una interfaz gráfica interactiva que permita visualizar la simulación en tiempo real.
+Como trabajo futuro, se propone extender el simulador para soportar múltiples dispositivos de E/S con diferentes latencias, implementar algoritmos de planificación multinivel con retroalimentación, y añadir la simulación de accesos individuales a páginas de memoria. Esta última extensión permitiría implementar el algoritmo óptimo de manera precisa, evaluando los accesos futuros a páginas específicas en lugar de utilizar la heurística actual basada en el estado de los procesos. También sería interesante agregar una interfaz gráfica interactiva que permita visualizar la simulación en tiempo real.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

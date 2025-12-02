@@ -1,0 +1,118 @@
+LISTADO DE REFERENCIAS PARA INFORME2.TEX
+=========================================
+
+Las siguientes referencias deben ser integradas al archivo refs.bib
+y luego reemplazar los [X] textuales por \cite{clave} correspondiente.
+
+CONCEPTOS TEÓRICOS (Revisión de la Literatura)
+----------------------------------------------
+
+[1] Sistema operativo - Definición general
+    Sugerencia: Silberschatz, A., Galvin, P. B., & Gagne, G. (2018). 
+    Operating System Concepts (10th ed.). Wiley.
+
+[2] Proceso - Definición y estados
+    Sugerencia: Tanenbaum, A. S., & Bos, H. (2014). 
+    Modern Operating Systems (4th ed.). Pearson.
+
+[3] Planificación de CPU - Conceptos generales
+    Sugerencia: Stallings, W. (2018). 
+    Operating Systems: Internals and Design Principles (9th ed.). Pearson.
+
+[4] Algoritmo FCFS (First Come First Served)
+    Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 5.
+
+[5] Algoritmo SJF (Shortest Job First)
+    Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 5.
+
+[6] Algoritmo Round Robin
+    Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 2.
+
+[7] Planificación por prioridad
+    Sugerencia: Stallings, Operating Systems, Cap. 9.
+
+[8] Memoria virtual - Conceptos generales
+    Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 9.
+
+[9] Paginación
+    Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 3.
+
+[10] Fallo de página
+     Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 10.
+
+[11] Algoritmo de reemplazo FIFO
+     Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 3.
+
+[12] Algoritmo de reemplazo LRU
+     Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 10.
+
+[13] Algoritmo de reemplazo NRU
+     Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 3.
+
+[14] Algoritmo de reemplazo óptimo
+     Sugerencia: Belady, L. A. (1966). A study of replacement algorithms 
+     for a virtual-storage computer. IBM Systems Journal, 5(2), 78-101.
+
+[15] Entrada/Salida - Gestión de dispositivos
+     Sugerencia: Stallings, Operating Systems, Cap. 11.
+
+[16] Quantum (planificación)
+     Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 2.
+
+[17] Concurrencia y sincronización
+     Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 6.
+
+[18] Mutex
+     Sugerencia: Silberschatz et al., Operating System Concepts, Cap. 6.
+
+[19] Variables de condición
+     Sugerencia: Tanenbaum & Bos, Modern Operating Systems, Cap. 2.
+
+[20] Inanición (starvation)
+     Sugerencia: Stallings, Operating Systems, Cap. 6.
+
+HERRAMIENTAS
+------------
+
+[21] CMake - Sistema de construcción
+     Sugerencia: https://cmake.org/ (Documentación oficial)
+     Martin, K., & Hoffman, B. (2010). Mastering CMake. Kitware.
+
+[22] Ninja - Sistema de compilación
+     Sugerencia: https://ninja-build.org/ (Documentación oficial)
+
+[23] Catch2 - Framework de pruebas
+     Sugerencia: https://github.com/catchorg/Catch2 (Repositorio oficial)
+
+[24] Just - Ejecutor de comandos
+     Sugerencia: https://github.com/casey/just (Repositorio oficial)
+
+[25] Seaborn - Biblioteca de visualización
+     Sugerencia: Waskom, M. L. (2021). seaborn: statistical data visualization. 
+     Journal of Open Source Software, 6(60), 3021.
+
+[26] Doxygen - Generador de documentación
+     Sugerencia: https://www.doxygen.nl/ (Documentación oficial)
+     van Heesch, D. (2008). Doxygen Manual.
+
+[27] LaTeX - Sistema de composición tipográfica
+     Sugerencia: Lamport, L. (1994). LaTeX: A Document Preparation System (2nd ed.). 
+     Addison-Wesley.
+
+OTRAS REFERENCIAS
+-----------------
+
+[28] C++17 - Estándar del lenguaje
+     Sugerencia: ISO/IEC 14882:2017. Programming languages — C++.
+
+[29] Python - Lenguaje de programación
+     Sugerencia: Van Rossum, G., & Drake, F. L. (2009). 
+     Python 3 Reference Manual. CreateSpace.
+
+[30] JSON Lines (JSONL) - Formato de datos
+     Sugerencia: https://jsonlines.org/ (Especificación oficial)
+
+[31] Diagrama de Gantt
+     Sugerencia: Wilson, J. M. (2003). Gantt charts: A centenary appreciation. 
+     European Journal of Operational Research, 149(2), 430-437.
+
