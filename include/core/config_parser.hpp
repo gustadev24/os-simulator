@@ -17,7 +17,9 @@ struct SimulatorConfig {
   int frame_size = 4096;
   std::string scheduling_algorithm;
   std::string page_replacement_algorithm;
+  std::string io_scheduling_algorithm = "FCFS";
   int quantum = 4;
+  int io_quantum = 4;
 };
 
 /**
@@ -43,8 +45,7 @@ public:
    * @param filename Ruta del archivo de configuración.
    * @return Estructura de configuración del simulador.
    */
-  static SimulatorConfig
-  load_simulator_config(const std::string &filename);
+  static SimulatorConfig load_simulator_config(const std::string &filename);
 
   /**
    * Parsea una línea de proceso individual.

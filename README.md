@@ -10,7 +10,7 @@ El simulador desarrollado busca simular el comportamiento de un sistema operativ
 - **Gestión de memoria virtual**: Paginación con algoritmos de reemplazo FIFO, LRU, NRU y Óptimo
 - **Gestión de E/S**: Simulación de dispositivos de entrada/salida con planificación FCFS y Round Robin
 - **Recolección de métricas**: Generación de archivos JSONL con datos de ejecución
-- **Visualización**: Generación de diagramas y gráficos
+- **Visualización**: Generación de diagramas y gráficos (modo individual y por lotes)
 
 ---
 
@@ -223,7 +223,9 @@ ARCHIVOS DE ENTRADA
         frame_size=4096
         scheduling_algorithm=RoundRobin
         page_replacement_algorithm=LRU
+        io_scheduling_algorithm=FCFS
         quantum=4
+        io_quantum=4
 
     Algoritmos de planificación disponibles:
         - FCFS
@@ -236,6 +238,10 @@ ARCHIVOS DE ENTRADA
         - LRU
         - Optimal
         - NRU
+
+    Algoritmos de planificación de E/S:
+        - FCFS
+        - RoundRobin
 ```
 
 ---
@@ -248,10 +254,17 @@ NOMBRE
 
 SINOPSIS
     python -m visualization [archivo_metricas] [directorio_salida]
+    python -m visualization --batch <directorio_entrada> [directorio_salida]
 
 DESCRIPCIÓN
-    Lee un archivo de métricas en formato JSONL generado por el simulador
-    y produce diagramas de visualización.
+    Lee archivos de métricas en formato JSONL y genera diagramas de visualización.
+
+MODOS DE OPERACIÓN
+    Modo individual (por defecto):
+        Procesa un único archivo de métricas.
+        
+    Modo por lotes (--batch):
+        Procesa todos los archivos JSONL en un directorio y sus subdirectorios.
 
 ARGUMENTOS
     archivo_metricas
@@ -262,15 +275,29 @@ ARGUMENTOS
         Directorio donde se guardarán los diagramas generados.
         Por defecto: data/diagramas
 
+OPCIONES
+    --batch <directorio_entrada>
+        Activa el modo por lotes. Procesa todos los archivos .jsonl
+        encontrados en el directorio de entrada.
+
+    -h, --help
+        Muestra la ayuda.
+
 EJEMPLOS
-    # Usar configuración por defecto
+    # Modo individual con configuración por defecto
     python -m visualization
 
-    # Especificar archivo de métricas
+    # Modo individual con archivo específico
     python -m visualization resultados/custom.jsonl
 
-    # Especificar archivo y directorio de salida
+    # Modo individual con archivo y directorio de salida
     python -m visualization data/resultados/metrics.jsonl output/graficos
+
+    # Modo por lotes - procesa todos los JSONL en un directorio
+    python -m visualization --batch data/resultados/combinations/
+
+    # Modo por lotes con directorio de salida personalizado
+    python -m visualization --batch data/resultados/ output/diagramas_batch/
 ```
 
 ---

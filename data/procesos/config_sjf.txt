@@ -1,6 +1,0 @@
-# Configuración para SJF (Shortest Job First)
-total_memory_frames=40
-frame_size=4096
-scheduling_algorithm=SJF
-page_replacement_algorithm=FIFO
-quantum=4

@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-#include "metrics/metrics_collector.hpp"
 #include "core/process.hpp"
-#include "io/io_manager.hpp"
 #include "io/io_device.hpp"
 #include "io/io_fcfs_scheduler.hpp"
+#include "io/io_manager.hpp"
 #include "io/io_request.hpp"
+#include "metrics/metrics_collector.hpp"
+#include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -21,7 +21,7 @@ TEST_CASE("MetricsCollector initialization", "[metrics][init]") {
   SECTION("Enable file output successfully") {
     std::filesystem::create_directories("data/test/resultados");
     const std::string path = "data/test/resultados/test_metrics.jsonl";
-    
+
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
     }
@@ -29,7 +29,7 @@ TEST_CASE("MetricsCollector initialization", "[metrics][init]") {
     MetricsCollector metrics;
     REQUIRE(metrics.enable_file_output(path));
     REQUIRE(metrics.is_enabled());
-    
+
     metrics.disable_output();
     REQUIRE_FALSE(metrics.is_enabled());
   }
@@ -50,7 +50,7 @@ TEST_CASE("MetricsCollector initialization", "[metrics][init]") {
 TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_cpu_metrics.jsonl";
-  
+
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
   }
@@ -65,7 +65,7 @@ TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
 
     std::ifstream in(path);
     REQUIRE(in.is_open());
-    
+
     std::string line;
     REQUIRE(std::getline(in, line));
     REQUIRE_FALSE(line.empty());
@@ -110,7 +110,7 @@ TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
     std::ifstream in(path);
     std::string line;
     int line_count = 0;
-    
+
     while (std::getline(in, line)) {
       if (!line.empty()) {
         json j = json::parse(line);
@@ -120,7 +120,7 @@ TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
         line_count++;
       }
     }
-    
+
     REQUIRE(line_count == 3);
   }
 }
@@ -128,7 +128,7 @@ TEST_CASE("MetricsCollector CPU logging", "[metrics][cpu]") {
 TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_io_metrics.jsonl";
-  
+
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
   }
@@ -143,7 +143,7 @@ TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
 
     std::ifstream in(path);
     REQUIRE(in.is_open());
-    
+
     std::string line;
     REQUIRE(std::getline(in, line));
     REQUIRE_FALSE(line.empty());
@@ -188,7 +188,7 @@ TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
     std::ifstream in(path);
     std::string line;
     int line_count = 0;
-    
+
     while (std::getline(in, line)) {
       if (!line.empty()) {
         json j = json::parse(line);
@@ -196,15 +196,16 @@ TEST_CASE("MetricsCollector IO logging", "[metrics][io]") {
         line_count++;
       }
     }
-    
+
     REQUIRE(line_count == 3);
   }
 }
 
-TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]") {
+TEST_CASE("MetricsCollector combined CPU and IO logging",
+          "[metrics][combined]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_combined_metrics.jsonl";
-  
+
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
   }
@@ -226,11 +227,11 @@ TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]")
     REQUIRE(j["tick"] == 0);
     REQUIRE(j.contains("cpu"));
     REQUIRE(j.contains("io"));
-    
+
     REQUIRE(j["cpu"]["event"] == "EXEC");
     REQUIRE(j["cpu"]["pid"] == 1);
     REQUIRE(j["cpu"]["name"] == "P1");
-    
+
     REQUIRE(j["io"]["device"] == "disk");
     REQUIRE(j["io"]["event"] == "IO_START");
     REQUIRE(j["io"]["pid"] == 2);
@@ -238,37 +239,32 @@ TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]")
   }
 
   SECTION("Multiple ticks with mixed events") {
-    // Tick 0: CPU only
+
     metrics.log_cpu(0, "EXEC", 1, "P1", 10, 1, false);
-    
-    // Tick 1: IO only
+
     metrics.log_io(1, "disk", "IO_START", 2, "P2", 5, 0);
-    
-    // Tick 2: Both CPU and IO
+
     metrics.log_cpu(2, "EXEC", 1, "P1", 9, 1, false);
     metrics.log_io(2, "disk", "IO_EXEC", 2, "P2", 4, 0);
-    
+
     metrics.flush_all();
     metrics.disable_output();
 
     std::ifstream in(path);
     std::string line;
-    
-    // Line 1: tick 0, CPU only
+
     REQUIRE(std::getline(in, line));
     json j0 = json::parse(line);
     REQUIRE(j0["tick"] == 0);
     REQUIRE(j0.contains("cpu"));
     REQUIRE_FALSE(j0.contains("io"));
-    
-    // Line 2: tick 1, IO only
+
     REQUIRE(std::getline(in, line));
     json j1 = json::parse(line);
     REQUIRE(j1["tick"] == 1);
     REQUIRE_FALSE(j1.contains("cpu"));
     REQUIRE(j1.contains("io"));
-    
-    // Line 3: tick 2, both
+
     REQUIRE(std::getline(in, line));
     json j2 = json::parse(line);
     REQUIRE(j2["tick"] == 2);
@@ -280,7 +276,7 @@ TEST_CASE("MetricsCollector combined CPU and IO logging", "[metrics][combined]")
 TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
   std::filesystem::create_directories("data/test/resultados");
   const std::string path = "data/test/resultados/test_buffer_metrics.jsonl";
-  
+
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
   }
@@ -289,28 +285,27 @@ TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
   REQUIRE(metrics.enable_file_output(path));
 
   SECTION("Ticks are flushed in order") {
-    // Log events out of order
+
     metrics.log_cpu(2, "EXEC", 3, "P3", 5, 0, false);
     metrics.log_cpu(0, "EXEC", 1, "P1", 10, 2, false);
     metrics.log_cpu(1, "EXEC", 2, "P2", 8, 1, false);
-    
+
     metrics.flush_all();
     metrics.disable_output();
 
     std::ifstream in(path);
     std::string line;
-    
-    // Should be flushed in tick order: 0, 1, 2
+
     REQUIRE(std::getline(in, line));
     json j0 = json::parse(line);
     REQUIRE(j0["tick"] == 0);
     REQUIRE(j0["cpu"]["pid"] == 1);
-    
+
     REQUIRE(std::getline(in, line));
     json j1 = json::parse(line);
     REQUIRE(j1["tick"] == 1);
     REQUIRE(j1["cpu"]["pid"] == 2);
-    
+
     REQUIRE(std::getline(in, line));
     json j2 = json::parse(line);
     REQUIRE(j2["tick"] == 2);
@@ -320,14 +315,14 @@ TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
   SECTION("Multiple logs to same tick are merged") {
     metrics.log_cpu(5, "EXEC", 1, "P1", 10, 1, false);
     metrics.log_io(5, "disk", "IO_START", 2, "P2", 5, 0);
-    
+
     metrics.flush_all();
     metrics.disable_output();
 
     std::ifstream in(path);
     std::string line;
     int line_count = 0;
-    
+
     while (std::getline(in, line)) {
       if (!line.empty()) {
         json j = json::parse(line);
@@ -337,15 +332,16 @@ TEST_CASE("MetricsCollector tick ordering and buffering", "[metrics][buffer]") {
         line_count++;
       }
     }
-    
-    // Should be only one line with both CPU and IO
+
     REQUIRE(line_count == 1);
   }
 }
 
-TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration]") {
+TEST_CASE("MetricsCollector with IO Manager integration",
+          "[metrics][integration]") {
   std::filesystem::create_directories("data/test/resultados");
-  const std::string path = "data/test/resultados/test_integration_metrics.jsonl";
+  const std::string path =
+      "data/test/resultados/test_integration_metrics.jsonl";
 
   if (std::filesystem::exists(path)) {
     std::filesystem::remove(path);
@@ -391,16 +387,16 @@ TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration
 
     std::string line;
     int valid_lines = 0;
-    
+
     while (std::getline(in, line)) {
       if (!line.empty()) {
-        // Verify each line is valid JSON
+
         json j;
         REQUIRE_NOTHROW(j = json::parse(line));
-        
+
         REQUIRE(j.contains("tick"));
         REQUIRE(j["tick"].is_number());
-        
+
         valid_lines++;
       }
     }
@@ -411,12 +407,11 @@ TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration
   SECTION("Events contain correct structure") {
     std::ifstream in(path);
     std::string line;
-    
+
     while (std::getline(in, line)) {
       if (!line.empty()) {
         json j = json::parse(line);
-        
-        // If IO event exists, check structure
+
         if (j.contains("io")) {
           REQUIRE(j["io"].contains("device"));
           REQUIRE(j["io"].contains("event"));
@@ -424,7 +419,7 @@ TEST_CASE("MetricsCollector with IO Manager integration", "[metrics][integration
           REQUIRE(j["io"].contains("name"));
           REQUIRE(j["io"].contains("remaining"));
           REQUIRE(j["io"].contains("queue"));
-          
+
           REQUIRE(j["io"]["device"].is_string());
           REQUIRE(j["io"]["event"].is_string());
           REQUIRE(j["io"]["pid"].is_number());
@@ -441,7 +436,7 @@ TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
   SECTION("Switching from file to stdout") {
     std::filesystem::create_directories("data/test/resultados");
     const std::string path = "data/test/resultados/test_mode_switch.jsonl";
-    
+
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
     }
@@ -449,16 +444,14 @@ TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
     MetricsCollector metrics;
     REQUIRE(metrics.enable_file_output(path));
     REQUIRE(metrics.is_enabled());
-    
-    // Switch to stdout
+
     metrics.enable_stdout_output();
     REQUIRE(metrics.is_enabled());
-    
-    // Log something
+
     // TODO: great job at polluting test output :+1:
     metrics.log_cpu(0, "EXEC", 1, "P1", 10, 0, false);
     metrics.flush_all();
-    
+
     metrics.disable_output();
     REQUIRE_FALSE(metrics.is_enabled());
   }
@@ -466,17 +459,17 @@ TEST_CASE("MetricsCollector output modes", "[metrics][modes]") {
   SECTION("Disable output clears buffer") {
     std::filesystem::create_directories("data/test/resultados");
     const std::string path = "data/test/resultados/test_disable.jsonl";
-    
+
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
     }
 
     MetricsCollector metrics;
     REQUIRE(metrics.enable_file_output(path));
-    
+
     metrics.log_cpu(0, "EXEC", 1, "P1", 10, 0, false);
     metrics.disable_output();
-    
+
     REQUIRE_FALSE(metrics.is_enabled());
     REQUIRE(std::filesystem::exists(path));
   }

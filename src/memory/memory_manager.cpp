@@ -2,7 +2,6 @@
 #include "core/process.hpp"
 #include "metrics/metrics_collector.hpp"
 #include <algorithm>
-#include <iostream>
 
 namespace OSSimulator {
 
@@ -220,7 +219,6 @@ bool MemoryManager::reserve_frame_for_task(PageLoadTask &task) {
 
       auto &frame = frames[frame_idx];
       if (frame.occupied) {
-        // Check if the victim page is referenced (second-chance mechanism)
         auto it = process_map.find(frame.process_id);
         if (it != process_map.end()) {
           Process &victim_proc = *it->second;
@@ -228,7 +226,6 @@ bool MemoryManager::reserve_frame_for_task(PageLoadTask &task) {
               frame.page_id < static_cast<int>(victim_proc.page_table.size())) {
             Page &victim_page = victim_proc.page_table[frame.page_id];
             if (victim_page.referenced) {
-              // Cannot evict referenced page, task stays in queue
               return false;
             }
           }
@@ -279,11 +276,9 @@ void MemoryManager::evict_frame(int frame_idx) {
       total_replacements++;
 
       if (metrics_collector && metrics_collector->is_enabled()) {
-        metrics_collector->log_memory(memory_time, "PAGE_REPLACED",
-                                      evicted_pid, evicted_name,
-                                      evicted_page_id, frame_idx,
+        metrics_collector->log_memory(memory_time, "PAGE_REPLACED", evicted_pid,
+                                      evicted_name, evicted_page_id, frame_idx,
                                       total_page_faults, total_replacements);
-        // Log page table and frame status after replacement
         log_process_page_table(memory_time, evicted_pid);
         log_all_frames_status(memory_time);
       }
@@ -341,20 +336,17 @@ MemoryManager::complete_active_task(int completion_time) {
     metrics_collector->log_memory(completion_time, "PAGE_LOADED", pid,
                                   process->name, page_id, frame_id,
                                   total_page_faults, total_replacements);
-    // Log page table and frame status after page load
     log_process_page_table(completion_time, pid);
     log_all_frames_status(completion_time);
   }
 
-  // Check if this process has no more pending pages
   auto pending_it_check = pending_pages_by_process.find(pid);
-  bool no_pending_pages = (pending_it_check == pending_pages_by_process.end() || 
+  bool no_pending_pages = (pending_it_check == pending_pages_by_process.end() ||
                            pending_it_check->second.empty());
-  
+
   if (no_pending_pages && processes_waiting_on_memory.count(pid) > 0) {
     processes_waiting_on_memory.erase(pid);
     set_process_pages_referenced(*process, true);
-    // Log final state when process becomes ready
     if (metrics_collector && metrics_collector->is_enabled()) {
       log_process_page_table(completion_time, pid);
       log_all_frames_status(completion_time);
@@ -382,9 +374,6 @@ void MemoryManager::log_process_page_table(int tick, int pid) {
   if (!metrics_collector || !metrics_collector->is_enabled())
     return;
 
-  // NOTE: This method is called from within mutex-locked sections,
-  // so we should NOT acquire the lock here to avoid deadlock
-
   auto it = process_map.find(pid);
   if (it == process_map.end())
     return;
@@ -408,9 +397,6 @@ void MemoryManager::log_process_page_table(int tick, int pid) {
 void MemoryManager::log_all_frames_status(int tick) {
   if (!metrics_collector || !metrics_collector->is_enabled())
     return;
-
-  // NOTE: This method is called from within mutex-locked sections,
-  // so we should NOT acquire the lock here to avoid deadlock
 
   std::vector<MetricsCollector::FrameStatusEntry> entries;
 

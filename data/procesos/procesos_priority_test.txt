@@ -1,0 +1,15 @@
+# Procesos con diferentes prioridades
+# Escenario de prueba para algoritmo de prioridades
+
+P1 0 CPU(8),E/S(4),CPU(6) 1 8
+P2 1 CPU(10),E/S(3),CPU(8) 5 10
+P3 2 CPU(12),E/S(5),CPU(10) 2 12
+P4 3 CPU(6),E/S(4),CPU(8) 4 7
+P5 4 CPU(15),E/S(3),CPU(12) 1 14
+P6 5 CPU(9),E/S(6),CPU(7) 3 9
+P7 6 CPU(11),E/S(4),CPU(9) 2 11
+P8 7 CPU(7),E/S(5),CPU(6) 5 6
+P9 8 CPU(14),E/S(4),CPU(11) 1 13
+P10 9 CPU(8),E/S(3),CPU(10) 4 8
+P11 10 CPU(13),E/S(5),CPU(9) 2 12
+P12 11 CPU(10),E/S(4),CPU(7) 3 9

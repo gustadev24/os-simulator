@@ -7,6 +7,7 @@
 #include "io/io_device.hpp"
 #include "io/io_fcfs_scheduler.hpp"
 #include "io/io_manager.hpp"
+#include "io/io_round_robin_scheduler.hpp"
 #include "memory/fifo_replacement.hpp"
 #include "memory/lru_replacement.hpp"
 #include "memory/memory_manager.hpp"
@@ -50,7 +51,10 @@ void run_simulation(const std::string &process_file,
               << "\n";
     std::cout << "  Algoritmo de reemplazo:   "
               << config.page_replacement_algorithm << "\n";
+    std::cout << "  Algoritmo de E/S:         "
+              << config.io_scheduling_algorithm << "\n";
     std::cout << "  Quantum:                  " << config.quantum << "\n";
+    std::cout << "  Quantum E/S:              " << config.io_quantum << "\n";
     std::cout << "  Procesos cargados:        " << processes.size() << "\n";
 
     CPUScheduler scheduler;
@@ -88,7 +92,13 @@ void run_simulation(const std::string &process_file,
 
     auto io_manager = std::make_shared<IOManager>();
     auto disk_device = std::make_shared<IODevice>("disk");
-    disk_device->set_scheduler(std::make_unique<IOFCFSScheduler>());
+
+    if (config.io_scheduling_algorithm == "RoundRobin") {
+      disk_device->set_scheduler(
+          std::make_unique<IORoundRobinScheduler>(config.io_quantum));
+    } else {
+      disk_device->set_scheduler(std::make_unique<IOFCFSScheduler>());
+    }
     io_manager->add_device("disk", disk_device);
 
     scheduler.set_memory_manager(memory_manager);
