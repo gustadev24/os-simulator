@@ -262,7 +262,7 @@ DESCRIPCIÓN
 MODOS DE OPERACIÓN
     Modo individual (por defecto):
         Procesa un único archivo de métricas.
-        
+
     Modo por lotes (--batch):
         Procesa todos los archivos JSONL en un directorio y sus subdirectorios.
 
@@ -370,7 +370,25 @@ El PDF se genera en `docs/latex/refman.pdf`.
 
 ---
 
-### 3.4. Carpetas de resultados
+### 3.4. Ejecución de pruebas unitarias con Catch2
+
+#### Ejecutar pruebas
+
+Windows:
+
+```powershell
+.\build\bin\tests.exe
+```
+
+Linux/macOS:
+
+```bash
+./build/bin/tests
+```
+
+---
+
+### 3.5. Carpetas de resultados
 
 | Carpeta            | Contenido                                             |
 | ------------------ | ----------------------------------------------------- |
