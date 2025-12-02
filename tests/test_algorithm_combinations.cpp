@@ -38,8 +38,9 @@ namespace {
  * @param mem_algo Algoritmo de reemplazo de páginas.
  * @param io_algo Algoritmo de E/S.
  * @param output_file Archivo de salida para métricas.
- * @param quantum Quantum para Round Robin (CPU e IO).
+ * @param quantum Quantum para Round Robin de CPU.
  * @param frames Número de marcos de memoria disponibles.
+ * @param io_quantum Quantum para Round Robin de E/S (por defecto usa el mismo que CPU).
  * @return true si la simulación se completó correctamente.
  */
 bool run_simulation_combination(const std::string &process_file,
@@ -47,7 +48,12 @@ bool run_simulation_combination(const std::string &process_file,
                                 const std::string &mem_algo,
                                 const std::string &io_algo,
                                 const std::string &output_file, int quantum = 4,
-                                int frames = 64) {
+                                int frames = 64, int io_quantum = -1) {
+
+  // Si io_quantum no se especifica, usar el mismo quantum que CPU
+  if (io_quantum < 0) {
+    io_quantum = quantum;
+  }
 
   try {
     auto processes = ConfigParser::load_processes_from_file(process_file);
@@ -86,7 +92,7 @@ bool run_simulation_combination(const std::string &process_file,
 
     if (io_algo == "RoundRobin") {
       disk_device->set_scheduler(
-          std::make_unique<IORoundRobinScheduler>(quantum));
+          std::make_unique<IORoundRobinScheduler>(io_quantum));
     } else {
       disk_device->set_scheduler(std::make_unique<IOFCFSScheduler>());
     }
@@ -260,7 +266,7 @@ TEST_CASE("Tests con diferentes tipos de carga de trabajo",
           "[integration][workloads]") {
 
   const std::string output_dir = "data/resultados/workloads/";
-  const int frames = 128;
+  const int frames = 64;
   const int quantum = 10;
 
   SECTION("Carga intensiva de CPU con RoundRobin") {
@@ -273,7 +279,7 @@ TEST_CASE("Tests con diferentes tipos de carga de trabajo",
   SECTION("Carga intensiva de E/S con FCFS") {
     std::string output = output_dir + "io_heavy_fcfs.jsonl";
     REQUIRE(run_simulation_combination("data/procesos/procesos_io_heavy.txt",
-                                       "FCFS", "FIFO", "RoundRobin", output,
+                                       "FCFS", "FIFO", "FCFS", output,
                                        quantum, frames));
   }
 
@@ -303,7 +309,7 @@ TEST_CASE("Tests de IO scheduling", "[integration][io_scheduling]") {
 
   const std::string process_file = "data/procesos/procesos_io_heavy.txt";
   const std::string output_dir = "data/resultados/io_tests/";
-  const int frames = 128;
+  const int frames = 64;
   const int quantum = 10;
 
   SECTION("IO FCFS con carga E/S intensiva") {
