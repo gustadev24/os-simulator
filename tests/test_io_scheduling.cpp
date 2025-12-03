@@ -10,7 +10,7 @@
 
 using namespace OSSimulator;
 
-TEST_CASE("Burst creation and management", "[io][burst]") {
+TEST_CASE("Burst creation and management scheduling", "[io][burst]") {
   SECTION("CPU burst") {
     Burst burst(BurstType::CPU, 10);
     REQUIRE(burst.type == BurstType::CPU);
@@ -35,7 +35,7 @@ TEST_CASE("Burst creation and management", "[io][burst]") {
   }
 }
 
-TEST_CASE("Process with burst sequences", "[io][process]") {
+TEST_CASE("Process with burst sequences scheduling", "[io][process]") {
   SECTION("Single CPU burst process") {
     auto proc = std::make_shared<Process>(1, "P1", 0, 10);
     REQUIRE(proc->burst_sequence.size() == 1);
