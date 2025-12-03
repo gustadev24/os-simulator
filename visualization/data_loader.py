@@ -293,3 +293,78 @@ class MetricsLoader:
             "num_processes": len(self._processes),
             "state_counts": state_counts,
         }
+
+    def get_cpu_metrics(self) -> Dict[str, float]:
+        """
+        @brief Calcula métricas de CPU: tiempo de espera, retorno y utilización.
+        @return Diccionario con avg_waiting_time, avg_turnaround_time, cpu_utilization.
+        """
+        processes_data = {}
+
+        for event in self._metrics:
+            tick = event.get("tick", -1)
+
+            if "state_transitions" in event:
+                for trans in event["state_transitions"]:
+                    name = trans["name"]
+                    from_state = trans["from"]
+                    to_state = trans["to"]
+
+                    if name not in processes_data:
+                        processes_data[name] = {
+                            "arrival": None,
+                            "completion": None,
+                            "ready_periods": [],
+                            "running_periods": [],
+                            "current_state": None,
+                            "state_enter_tick": None,
+                        }
+
+                    p = processes_data[name]
+
+                    if p["current_state"] is not None and p["state_enter_tick"] is not None:
+                        duration = tick - p["state_enter_tick"]
+                        if p["current_state"] == "READY":
+                            p["ready_periods"].append(duration)
+                        elif p["current_state"] == "RUNNING":
+                            p["running_periods"].append(duration)
+
+                    if p["arrival"] is None and to_state == "READY":
+                        p["arrival"] = tick
+
+                    if to_state == "TERMINATED":
+                        p["completion"] = tick
+
+                    p["current_state"] = to_state
+                    p["state_enter_tick"] = tick
+
+        total_waiting = 0
+        total_turnaround = 0
+        total_cpu_time = 0
+        completed_processes = 0
+
+        for name, p in processes_data.items():
+            if p["arrival"] is not None and p["completion"] is not None:
+                waiting_time = sum(p["ready_periods"])
+                turnaround_time = p["completion"] - p["arrival"]
+
+                total_waiting += waiting_time
+                total_turnaround += turnaround_time
+                total_cpu_time += sum(p["running_periods"])
+                completed_processes += 1
+
+        if completed_processes == 0:
+            return {
+                "avg_waiting_time": 0.0,
+                "avg_turnaround_time": 0.0,
+                "cpu_utilization": 0.0,
+            }
+
+        total_ticks = self.get_max_tick()
+        cpu_utilization = (total_cpu_time / total_ticks * 100) if total_ticks > 0 else 0.0
+
+        return {
+            "avg_waiting_time": total_waiting / completed_processes,
+            "avg_turnaround_time": total_turnaround / completed_processes,
+            "cpu_utilization": cpu_utilization,
+        }

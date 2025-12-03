@@ -1,3 +1,8 @@
+/**
+ * @file test_cpu_scheduler.cpp
+ * @brief Tests de integración para el CPU Scheduler con todos los algoritmos
+ */
+
 #include "core/process.hpp"
 #include "cpu/cpu_scheduler.hpp"
 #include "cpu/fcfs_scheduler.hpp"
@@ -23,6 +28,10 @@ std::shared_ptr<IOManager> build_test_io_manager() {
 }
 
 } // namespace
+
+// ============================================================================
+// FCFS TESTS
+// ============================================================================
 
 TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   SECTION("Single process execution") {
@@ -82,6 +91,10 @@ TEST_CASE("CPU Scheduler - FCFS Integration", "[cpu_scheduler][fcfs]") {
   }
 }
 
+// ============================================================================
+// SJF TESTS
+// ============================================================================
+
 TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
   SECTION("Shortest job first order") {
     CPUScheduler cpu_scheduler;
@@ -128,6 +141,10 @@ TEST_CASE("CPU Scheduler - SJF Integration", "[cpu_scheduler][sjf]") {
     REQUIRE(completed[1]->turnaround_time == 8);
   }
 }
+
+// ============================================================================
+// ROUND ROBIN TESTS
+// ============================================================================
 
 TEST_CASE("CPU Scheduler - Round Robin Integration",
           "[cpu_scheduler][round_robin]") {
@@ -185,6 +202,10 @@ TEST_CASE("CPU Scheduler - Round Robin Integration",
     REQUIRE(cpu_scheduler2.get_current_time() == 20);
   }
 }
+
+// ============================================================================
+// PRIORITY TESTS
+// ============================================================================
 
 TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
   SECTION("Higher priority executes first") {
@@ -258,6 +279,10 @@ TEST_CASE("CPU Scheduler - Priority Integration", "[cpu_scheduler][priority]") {
     REQUIRE(completed[0]->completion_time < completed[1]->completion_time);
   }
 }
+
+// ============================================================================
+// METRICS & UTILITY TESTS
+// ============================================================================
 
 TEST_CASE("CPU Scheduler - Metrics Calculation", "[cpu_scheduler][metrics]") {
   SECTION("Average waiting time") {

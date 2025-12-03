@@ -1,0 +1,7 @@
+total_memory_frames=40
+frame_size=4096
+scheduling_algorithm=RoundRobin
+page_replacement_algorithm=FIFO
+io_scheduling_algorithm=FCFS
+quantum=2
+io_quantum=2

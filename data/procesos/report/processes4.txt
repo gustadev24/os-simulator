@@ -1,0 +1,7 @@
+P1 0 CPU(3),E/S(2),CPU(3),E/S(2),CPU(3),E/S(2),CPU(3) 1 6
+P2 1 CPU(2),E/S(3),CPU(2),E/S(3),CPU(2),E/S(3),CPU(2) 2 5
+P3 2 CPU(4),E/S(1),CPU(4),E/S(1),CPU(4),E/S(1),CPU(4) 3 7
+P4 3 CPU(3),E/S(3),CPU(3),E/S(3),CPU(3) 1 6
+P5 5 CPU(5),E/S(1),CPU(2),E/S(1),CPU(5) 2 5
+P6 7 CPU(2),E/S(2),CPU(2),E/S(2),CPU(2),E/S(2),CPU(2),E/S(2) 3 6
+P7 9 CPU(4),E/S(4),CPU(4),E/S(4) 1 7

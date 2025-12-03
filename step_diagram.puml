@@ -1,0 +1,55 @@
+@startuml
+skinparam defaultTextAlignment center
+
+start
+
+:Agregar procesos llegados
+and obtener siguiente proceso válido;
+
+if (¿Hay un proceso listo?) then (No)
+  :ESTADO INACTIVO
+  Avanzar relojes de E/S y memoria
+  Incrementar tiempo;
+  stop
+else (Sí)
+  if (Ejecutando != Siguiente) then (Sí)
+    :Cambio de contexto;
+  endif
+endif
+
+partition "Comprobaciones previas" {
+  if (¿Falla comprobación de memoria?) then (Sí)
+    :Establecer estado ESPERA_MEMORIA
+    Eliminar del planificador;
+    stop
+  elseif (¿Es ráfaga de E/S?) then (Sí)
+    :Establecer estado ESPERANDO
+    Enviar al IOManager;
+    stop
+  endif
+}
+
+partition "Ejecución" {
+  :Notificar y ejecutar proceso
+  (Consume quantum de CPU);
+  
+  :Avanzar gestores de E/S y memoria
+  (Poner al día el tiempo de simulación);
+}
+
+partition "Post-Ejecución" {
+  if (¿Trabajo terminado?) then (Sí)
+    :Establecer TERMINADO
+    Liberar memoria
+    Guardar métricas;
+  elseif (¿Quantum expirado / Preempción?) then (Sí)
+    :Establecer LISTO
+    Reencolar (Round Robin);
+  else (Continuar)
+    :Establecer LISTO
+    (Ceder bloqueo);
+  endif
+}
+
+stop
+@enduml
