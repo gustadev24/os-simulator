@@ -1,0 +1,700 @@
+@startuml
+left to right direction
+class "Frame" as C_0004315181692269219892
+class C_0004315181692269219892 {
+__
++frame_id : int
++occupied : bool
++page_id : int
++process_id : int
+}
+abstract "ReplacementAlgorithm" as C_0008692990845302086001
+abstract C_0008692990845302086001 {
++~ReplacementAlgorithm() = default : void
+..
++on_frame_release(int) : void
++on_page_access(int) : void
+{abstract} +select_victim(const std::vector<Frame> & frames, const std::unordered_map<int,std::shared_ptr<Process>> & process_map, int current_time) = 0 : int
+__
+}
+class "OptimalReplacement" as C_0018275629403234503673
+class C_0018275629403234503673 {
++select_victim(const std::vector<Frame> & frames, const std::unordered_map<int,std::shared_ptr<Process>> & process_map, int current_time) : int
+__
+}
+enum "BurstType" as C_0015735653263211638286
+enum C_0015735653263211638286 {
+CPU
+IO
+}
+class "Burst" as C_0011891657276856613663
+class C_0011891657276856613663 {
++Burst() : void
++Burst(BurstType t, int d, const std::string & device = "") : void
+..
++is_completed() const : bool
++reset() : void
+__
++duration : int
++io_device : std::string
++remaining_time : int
++type : BurstType
+}
+class "Page" as C_0010555154932132580159
+class C_0010555154932132580159 {
++Page() : void
++Page(int id) : void
+__
++frame_number : int
++last_access_time : int
++modified : bool
++page_id : int
++process_id : int
++referenced : bool
++valid : bool
+}
+enum "ProcessState" as C_0006126844542738160764
+enum C_0006126844542738160764 {
+NEW
+READY
+MEMORY_WAITING
+RUNNING
+WAITING
+TERMINATED
+}
+class "Process" as C_0017124327411696956044
+class C_0017124327411696956044 {
++Process() : void
++Process(int p, const std::string & n, int arrival, int burst, int prio = 0, uint32_t mem = 0) : void
++Process(int p, const std::string & n, int arrival, const std::vector<Burst> & bursts, int prio = 0, uint32_t mem = 0) : void
++Process(const Process & other) = deleted : void
++Process(Process && other) noexcept : void
++~Process() : void
+..
++operator=(const Process & other) = deleted : Process &
+..
++advance_page_access() : void
++advance_to_next_burst() : void
++calculate_metrics() : void
++execute(int quantum, int current_time) : int
++get_current_burst() const : const Burst *
++get_current_burst_mutable() : Burst *
++get_next_page_access() const : int
++get_total_burst_time() const : int
++has_arrived(int current_time) const : bool
++has_more_bursts() const : bool
++is_completed() const : bool
++is_on_cpu_burst() const : bool
++is_on_io_burst() const : bool
++is_thread_running() const : bool
++reset() : void
++start_thread() : void
++stop_thread() : void
+-thread_function() : void
+__
++active_pages_count : int
++arrival_time : int
++burst_sequence : std::vector<Burst>
++burst_time : int
++completion_time : int
++current_access_index : size_t
++current_burst_index : size_t
++first_execution : bool
++last_execution_time : int
++memory_access_trace : std::vector<int>
++memory_allocated : bool
++memory_base : uint32_t
++memory_required : uint32_t
++name : std::string
++page_faults : int
++page_table : std::vector<Page>
++pid : int
++priority : int
++process_mutex : std::mutex
++process_thread : std::unique_ptr<std::thread>
++remaining_time : int
++replacements : int
++response_time : int
++should_terminate : std::atomic<bool>
++start_time : int
++state : std::atomic<ProcessState>
++state_cv : std::condition_variable
++step_complete : std::atomic<bool>
++total_cpu_time : int
++total_io_time : int
++turnaround_time : int
++waiting_time : int
+}
+class "MemoryManager" as C_0015686568166430605488
+class C_0015686568166430605488 {
++MemoryManager(int total_frames, std::unique_ptr<ReplacementAlgorithm> algo, int page_fault_latency = 1) : void
+..
++advance_fault_queue(int duration, int start_time) : void
++allocate_initial_memory(Process & process) : bool
+-are_all_pages_resident(const Process & process) const : bool
+-complete_active_task(int completion_time) : std::shared_ptr<Process>
+-enqueue_missing_pages(std::shared_ptr<Process> process, const std::vector<int> & missing_pages, int current_time) : void
+-evict_frame(int frame_idx) : void
+-find_free_frame() : int
++get_total_page_faults() const : int
++get_total_replacements() const : int
++log_all_frames_status(int tick) : void
++log_process_page_table(int tick, int pid) : void
++mark_process_inactive(const Process & process) : void
++prepare_process_for_cpu(std::shared_ptr<Process> process, int current_time) : bool
++register_process(std::shared_ptr<Process> process) : void
++release_process_memory(int pid) : void
+-reserve_frame_for_task(PageLoadTask & task) : bool
++set_metrics_collector(std::shared_ptr<MetricsCollector> collector) : void
+-set_process_pages_referenced(const Process & process, bool referenced) : void
++set_ready_callback(ProcessReadyCallback callback) : void
+-start_next_task_if_possible(int current_time) : void
++unregister_process(int pid) : void
+__
+-active_task : std::optional<PageLoadTask>
+-algorithm : std::unique_ptr<ReplacementAlgorithm>
+-fault_queue : std::deque<PageLoadTask>
+-frames : std::vector<Frame>
+-memory_time : int
+-metrics_collector : std::shared_ptr<MetricsCollector>
+-mutex_ : std::mutex
+-page_fault_latency : int
+-pending_pages_by_process : std::unordered_map<int,std::unordered_set<int>>
+-process_map : std::unordered_map<int,std::shared_ptr<Process>>
+-processes_waiting_on_memory : std::unordered_set<int>
+-ready_callback : ProcessReadyCallback
+-total_frames : int
+-total_page_faults : int
+-total_replacements : int
+}
+class "MemoryManager::PageLoadTask" as C_0016162522318200507504
+class C_0016162522318200507504 {
+__
++enqueue_time : int
++frame_id : int
++page_id : int
++process : std::shared_ptr<Process>
++remaining_time : int
+}
+class "MetricsCollector" as C_0010690123791750361250
+class C_0010690123791750361250 {
++MetricsCollector() : void
++~MetricsCollector() : void
+..
++disable_output() : void
++enable_file_output(const std::string & path) : bool
++enable_stdout_output() : void
++flush_all() : void
+-flush_tick(int tick) : void
++is_enabled() const : bool
++log_cpu(int tick, const std::string & event, int pid, const std::string & name, int remaining, size_t ready_queue_size, bool context_switch_occurred) : void
++log_cpu_summary(int total_time, double cpu_utilization, double avg_waiting_time, double avg_turnaround_time, double avg_response_time, int context_switches, const std::string & algorithm) : void
++log_frame_status(int tick, const std::vector<FrameStatusEntry> & frame_status) : void
++log_io(int tick, const std::string & device_name, const std::string & event, int pid, const std::string & name, int remaining, size_t queue_size) : void
++log_memory(int tick, const std::string & event, int pid, const std::string & name, int page_id, int frame_id, int total_page_faults, int total_replacements) : void
++log_memory_summary(int total_page_faults, int total_replacements, int total_frames, int used_frames, const std::string & algorithm) : void
++log_page_table(int tick, int pid, const std::string & name, const std::vector<PageTableEntry> & page_table) : void
++log_queue_snapshot(int tick, const std::vector<int> & ready_queue, const std::vector<int> & blocked_memory_queue, const std::vector<int> & blocked_io_queue, int running_pid) : void
++log_state_transition(int tick, int pid, const std::string & name, ProcessState from_state, ProcessState to_state, const std::string & reason) : void
+{static} -process_state_to_string(ProcessState state) : std::string
+-write_line(const std::string & json_line) : void
+__
+-file_out : std::unique_ptr<std::ofstream>
+-last_flushed_tick : int
+-mode : OutputMode
+-output_mutex : std::mutex
+-tick_buffer : std::map<int,TickData>
+}
+enum "MetricsCollector::OutputMode" as C_0010009050866816824084
+enum C_0010009050866816824084 {
+DISABLED
+FILE
+STDOUT
+}
+class "MetricsCollector::PageTableEntry" as C_0007366005874543291646
+class C_0007366005874543291646 {
+__
++frame_id : int
++modified : bool
++page_id : int
++referenced : bool
++valid : bool
+}
+class "MetricsCollector::FrameStatusEntry" as C_0010281535022454777456
+class C_0010281535022454777456 {
+__
++frame_id : int
++occupied : bool
++page_id : int
++pid : int
+}
+class "MetricsCollector::CpuTickData" as C_0001937968049465904650
+class C_0001937968049465904650 {
+__
++context_switch : bool
++event : std::string
++name : std::string
++pid : int
++ready_queue_size : size_t
++remaining : int
+}
+class "MetricsCollector::IoTickData" as C_0007858306819575258893
+class C_0007858306819575258893 {
+__
++device : std::string
++event : std::string
++name : std::string
++pid : int
++queue_size : size_t
++remaining : int
+}
+class "MetricsCollector::MemoryTickData" as C_0013834802247191457044
+class C_0013834802247191457044 {
+__
++event : std::string
++frame_id : int
++name : std::string
++page_id : int
++pid : int
++total_page_faults : int
++total_replacements : int
+}
+class "MetricsCollector::StateTransitionData" as C_0008814771464291301910
+class C_0008814771464291301910 {
+__
++from_state : std::string
++name : std::string
++pid : int
++reason : std::string
++to_state : std::string
+}
+class "MetricsCollector::QueueSnapshotData" as C_0002689750739648036756
+class C_0002689750739648036756 {
+__
++blocked_io_queue : std::vector<int>
++blocked_memory_queue : std::vector<int>
++ready_queue : std::vector<int>
++running_pid : int
+}
+class "MetricsCollector::PageTableSnapshot" as C_0017970816228520281845
+class C_0017970816228520281845 {
+__
++name : std::string
++pages : std::vector<PageTableEntry>
++pid : int
+}
+class "MetricsCollector::FrameStatusSnapshot" as C_0004620521348394676367
+class C_0004620521348394676367 {
+__
++frames : std::vector<FrameStatusEntry>
+}
+class "MetricsCollector::TickData" as C_0016919842986624894284
+class C_0016919842986624894284 {
+__
++cpu : CpuTickData
++frame_status : FrameStatusSnapshot
++has_cpu : bool
++has_frame_status : bool
++has_io : bool
++has_memory : bool
++has_page_table : bool
++has_queue_snapshot : bool
++io : IoTickData
++memory : MemoryTickData
++page_table : PageTableSnapshot
++queue_snapshot : QueueSnapshotData
++state_transitions : std::vector<StateTransitionData>
+}
+class "NRUReplacement" as C_0012297862223289303692
+class C_0012297862223289303692 {
++select_victim(const std::vector<Frame> & frames, const std::unordered_map<int,std::shared_ptr<Process>> & process_map, int current_time) : int
+__
+}
+class "FIFOReplacement" as C_0007502489721465431826
+class C_0007502489721465431826 {
++on_frame_release(int frame_id) : void
++on_page_access(int frame_id) : void
++select_victim(const std::vector<Frame> & frames, const std::unordered_map<int,std::shared_ptr<Process>> & process_map, int current_time) : int
+__
+-fifo_queue : std::list<int>
+}
+class "LRUReplacement" as C_0016904465258491332869
+class C_0016904465258491332869 {
++select_victim(const std::vector<Frame> & frames, const std::unordered_map<int,std::shared_ptr<Process>> & process_map, int current_time) : int
+__
+}
+class "SimulatorConfig" as C_0014959434479756000164
+class C_0014959434479756000164 {
+__
++frame_size : int
++io_quantum : int
++io_scheduling_algorithm : std::string
++page_replacement_algorithm : std::string
++quantum : int
++scheduling_algorithm : std::string
++total_memory_frames : int
+}
+class "ConfigParser" as C_0001407135350663951225
+class C_0001407135350663951225 {
+{static} +load_processes_from_file(const std::string & filename) : std::vector<std::shared_ptr<Process>>
+{static} +load_simulator_config(const std::string & filename) : SimulatorConfig
+{static} +parse_burst_sequence(const std::string & burst_str) : std::vector<Burst>
+{static} +parse_process_line(const std::string & line) : std::shared_ptr<Process>
+{static} -starts_with(const std::string & str, const std::string & prefix) : bool
+{static} -trim(const std::string & str) : std::string
+__
+}
+enum "SchedulingAlgorithm" as C_0000376715805624440450
+enum C_0000376715805624440450 {
+FCFS
+SJF
+ROUND_ROBIN
+PRIORITY
+}
+abstract "Scheduler" as C_0007580346824975383624
+abstract C_0007580346824975383624 {
++~Scheduler() = default : void
+..
+{abstract} +add_process(std::shared_ptr<Process> process) = 0 : void
+{abstract} +clear() = 0 : void
+{abstract} +get_algorithm() const = 0 : SchedulingAlgorithm
+{abstract} +get_next_process() = 0 : std::shared_ptr<Process>
+{abstract} +has_processes() const = 0 : bool
+{abstract} +remove_process(int pid) = 0 : void
+{abstract} +size() const = 0 : size_t
+__
+}
+class "PriorityScheduler" as C_0011772050897097102088
+class C_0011772050897097102088 {
++add_process(std::shared_ptr<Process> process) : void
++clear() : void
++get_algorithm() const : SchedulingAlgorithm
++get_next_process() : std::shared_ptr<Process>
++has_processes() const : bool
++remove_process(int pid) : void
++size() const : size_t
+__
+-ready_queue : std::vector<std::shared_ptr<Process>>
+}
+class "FCFSScheduler" as C_0012508087039555320850
+class C_0012508087039555320850 {
++add_process(std::shared_ptr<Process> process) : void
++clear() : void
++get_algorithm() const : SchedulingAlgorithm
++get_next_process() : std::shared_ptr<Process>
++has_processes() const : bool
++remove_process(int pid) : void
++size() const : size_t
+__
+-ready_queue : std::deque<std::shared_ptr<Process>>
+}
+class "CPUScheduler" as C_0004177479592842890715
+class C_0004177479592842890715 {
++CPUScheduler() : void
++~CPUScheduler() : void
+..
++add_arrived_processes() : void
++add_process(std::shared_ptr<Process> process) : void
+-advance_io_devices(int time_slice, int step_start_time, std::unique_lock<std::mutex> & lock) : void
+-advance_memory_manager(int time_slice, int step_start_time, std::unique_lock<std::mutex> & lock) : void
++check_and_allocate_memory(Process & process) : bool
++execute_step(int quantum = 1) : void
++get_algorithm_name() const : std::string
++get_all_processes() const : const std::vector<std::shared_ptr<Process>> &
++get_average_response_time() const : double
++get_average_turnaround_time() const : double
++get_average_waiting_time() const : double
++get_completed_processes() const : const std::vector<std::shared_ptr<Process>> &
++get_context_switches() const : int
++get_cpu_utilization() const : double
++get_current_time() const : int
++get_io_waiting_pids() const : std::vector<int>
++get_memory_waiting_pids() const : std::vector<int>
++get_ready_queue_pids() const : std::vector<int>
++get_ready_queue_size() const : size_t
++get_running_pid() const : int
+-handle_io_completion(std::shared_ptr<Process> proc, int completion_time) : void
+-handle_memory_ready(std::shared_ptr<Process> proc) : void
++has_pending_processes() const : bool
++load_processes(const std::vector<std::shared_ptr<Process>> & processes) : void
+-notify_process_running(std::shared_ptr<Process> proc) : void
+-request_preemption_if_needed(std::shared_ptr<Process> proc) : void
++reset() : void
++run_until_completion() : void
+-send_cpu_metrics(const std::string & event, std::shared_ptr<Process> proc, bool context_switch) : void
+-send_queue_snapshot() : void
+-send_queue_snapshot(int tick) : void
++set_io_manager(std::shared_ptr<IOManager> manager) : void
++set_memory_callback(MemoryCheckCallback callback) : void
++set_memory_manager(std::shared_ptr<MemoryManager> mm) : void
++set_metrics_collector(std::shared_ptr<MetricsCollector> collector) : void
++set_scheduler(std::unique_ptr<Scheduler> sched) : void
+-should_preempt_priority(std::shared_ptr<Process> candidate) const : bool
+-spawn_process_thread(std::shared_ptr<Process> proc) : void
+-terminate_all_threads() : void
+-wait_for_process_step(std::shared_ptr<Process> proc) : void
+__
+-all_processes : std::vector<std::shared_ptr<Process>>
+-completed_processes : std::vector<std::shared_ptr<Process>>
+-context_switches : int
+-current_time : int
+-io_manager : std::shared_ptr<IOManager>
+-last_tick_was_idle : bool
+-memory_check_callback : MemoryCheckCallback
+-memory_manager : std::shared_ptr<MemoryManager>
+-metrics_collector : std::shared_ptr<MetricsCollector>
+-pending_preemption : bool
+-running_process : std::shared_ptr<Process>
+-scheduler : std::unique_ptr<Scheduler>
+-scheduler_mutex : std::mutex
+-simulation_running : std::atomic<bool>
+-total_cpu_time : int
+}
+class "RoundRobinScheduler" as C_0012387011832210303416
+class C_0012387011832210303416 {
++RoundRobinScheduler(int q = 4) : void
+..
++add_process(std::shared_ptr<Process> process) : void
++clear() : void
++get_algorithm() const : SchedulingAlgorithm
++get_next_process() : std::shared_ptr<Process>
++get_quantum() const : int
++has_processes() const : bool
++remove_process(int pid) : void
++rotate() : void
++set_quantum(int q) : void
++size() const : size_t
+__
+-quantum : int
+-ready_queue : std::deque<std::shared_ptr<Process>>
+}
+class "IORequest" as C_0006015274746488179789
+class C_0006015274746488179789 {
++IORequest() : void
++IORequest(std::shared_ptr<Process> proc, const Burst & b, int arrival, int prio = 0) : void
+..
++execute(int quantum, int current_time) : int
++is_completed() const : bool
+__
++arrival_time : int
++burst : Burst
++completion_time : int
++priority : int
++process : std::shared_ptr<Process>
++start_time : int
+}
+enum "IOSchedulingAlgorithm" as C_0000649663591845582532
+enum C_0000649663591845582532 {
+FCFS
+SJF
+ROUND_ROBIN
+PRIORITY
+}
+abstract "IOScheduler" as C_0005309394375849652600
+abstract C_0005309394375849652600 {
++~IOScheduler() = default : void
+..
+{abstract} +add_request(std::shared_ptr<IORequest> request) = 0 : void
+{abstract} +clear() = 0 : void
+{abstract} +get_algorithm() const = 0 : IOSchedulingAlgorithm
+{abstract} +get_next_request() = 0 : std::shared_ptr<IORequest>
+{abstract} +has_requests() const = 0 : bool
+{abstract} +remove_request(std::shared_ptr<IORequest> request) = 0 : void
+{abstract} +size() const = 0 : size_t
+__
+}
+class "IODevice" as C_0002693170422180874951
+class C_0002693170422180874951 {
++IODevice(const std::string & name) : void
++~IODevice() = default : void
+..
++add_io_request(std::shared_ptr<IORequest> request) : void
++execute_step(int quantum, int current_time) : void
++get_device_name() const : std::string
++get_device_switches() const : int
++get_queue_size() const : size_t
++get_total_io_time() const : int
++get_total_requests_completed() const : int
++has_pending_requests() const : bool
++is_busy() const : bool
++reset() : void
++send_log_metrics(int current_time) : void
++set_completion_callback(CompletionCallback callback) : void
++set_metrics_collector(std::shared_ptr<MetricsCollector> collector) : void
++set_scheduler(std::unique_ptr<IOScheduler> sched) : void
+__
+-completion_callback : CompletionCallback
+-current_quantum_used : int
+-current_request : std::shared_ptr<IORequest>
+-device_mutex : std::mutex
+-device_name : std::string
+-device_switches : int
+-last_completed_name : std::string
+-last_completed_pid : int
+-last_event_was_completed : bool
+-last_event_was_step : bool
+-last_step_name : std::string
+-last_step_pid : int
+-last_step_remaining : int
+-metrics_collector : std::shared_ptr<MetricsCollector>
+-scheduler : std::unique_ptr<IOScheduler>
+-total_io_time : int
+-total_requests_completed : int
+}
+class "IOManager" as C_0008219851577123996267
+class C_0008219851577123996267 {
++IOManager() = default : void
++~IOManager() = default : void
+..
++add_device(const std::string & name, std::shared_ptr<IODevice> device) : void
++execute_all_devices(int quantum, int current_time) : void
++get_all_devices() const : std::map<std::string,std::shared_ptr<IODevice>>
++get_device(const std::string & name) : std::shared_ptr<IODevice>
++has_device(const std::string & name) const : bool
++has_pending_io() const : bool
++reset_all_devices() : void
++set_completion_callback(CompletionCallback callback) : void
++set_metrics_collector(std::shared_ptr<MetricsCollector> collector) : void
++submit_io_request(std::shared_ptr<IORequest> request) : void
+__
+-completion_callback : CompletionCallback
+-devices : std::map<std::string,std::shared_ptr<IODevice>>
+-manager_mutex : std::mutex
+-metrics_collector : std::shared_ptr<MetricsCollector>
+}
+class "SJFScheduler" as C_0017799743282178042182
+class C_0017799743282178042182 {
++add_process(std::shared_ptr<Process> process) : void
++clear() : void
++get_algorithm() const : SchedulingAlgorithm
++get_next_process() : std::shared_ptr<Process>
++has_processes() const : bool
++remove_process(int pid) : void
++size() const : size_t
+__
+-ready_queue : std::vector<std::shared_ptr<Process>>
+}
+class "IOFCFSScheduler" as C_0011376090978946678222
+class C_0011376090978946678222 {
++add_request(std::shared_ptr<IORequest> request) : void
++clear() : void
++get_algorithm() const : IOSchedulingAlgorithm
++get_next_request() : std::shared_ptr<IORequest>
++has_requests() const : bool
++remove_request(std::shared_ptr<IORequest> request) : void
++size() const : size_t
+__
+-queue : std::deque<std::shared_ptr<IORequest>>
+}
+class "IORoundRobinScheduler" as C_0015119987245978162037
+class C_0015119987245978162037 {
++IORoundRobinScheduler(int q = 4) : void
+..
++add_request(std::shared_ptr<IORequest> request) : void
++clear() : void
++get_algorithm() const : IOSchedulingAlgorithm
++get_next_request() : std::shared_ptr<IORequest>
++get_quantum() const : int
++has_requests() const : bool
++remove_request(std::shared_ptr<IORequest> request) : void
++set_quantum(int q) : void
++size() const : size_t
+__
+-quantum : int
+-queue : std::deque<std::shared_ptr<IORequest>>
+}
+C_0008692990845302086001 ..> C_0004315181692269219892
+C_0008692990845302086001 ..> C_0017124327411696956044
+C_0018275629403234503673 ..> C_0004315181692269219892
+C_0018275629403234503673 ..> C_0017124327411696956044
+C_0008692990845302086001 <|-- C_0018275629403234503673
+C_0011891657276856613663 o-- C_0015735653263211638286 : +type
+C_0017124327411696956044 o-- C_0006126844542738160764 : +state
+C_0017124327411696956044 o-- C_0010555154932132580159 : +page_table
+C_0017124327411696956044 o-- C_0011891657276856613663 : +burst_sequence
+C_0015686568166430605488 ..> C_0016162522318200507504
+C_0015686568166430605488 o-- C_0008692990845302086001 : -algorithm
+C_0015686568166430605488 o-- C_0004315181692269219892 : -frames
+C_0015686568166430605488 o-- C_0017124327411696956044 : -process_map
+C_0015686568166430605488 --> C_0010690123791750361250 : -metrics_collector
+C_0016162522318200507504 --+ C_0015686568166430605488
+C_0016162522318200507504 --> C_0017124327411696956044 : +process
+C_0010690123791750361250 ..> C_0006126844542738160764
+C_0010690123791750361250 ..> C_0007366005874543291646
+C_0010690123791750361250 ..> C_0010281535022454777456
+C_0010690123791750361250 o-- C_0010009050866816824084 : -mode
+C_0010009050866816824084 --+ C_0010690123791750361250
+C_0007366005874543291646 --+ C_0010690123791750361250
+C_0010281535022454777456 --+ C_0010690123791750361250
+C_0001937968049465904650 --+ C_0010690123791750361250
+C_0007858306819575258893 --+ C_0010690123791750361250
+C_0013834802247191457044 --+ C_0010690123791750361250
+C_0008814771464291301910 --+ C_0010690123791750361250
+C_0002689750739648036756 --+ C_0010690123791750361250
+C_0017970816228520281845 --+ C_0010690123791750361250
+C_0004620521348394676367 --+ C_0010690123791750361250
+C_0016919842986624894284 --+ C_0010690123791750361250
+C_0016919842986624894284 o-- C_0001937968049465904650 : +cpu
+C_0016919842986624894284 o-- C_0007858306819575258893 : +io
+C_0016919842986624894284 o-- C_0013834802247191457044 : +memory
+C_0016919842986624894284 o-- C_0002689750739648036756 : +queue_snapshot
+C_0016919842986624894284 o-- C_0017970816228520281845 : +page_table
+C_0016919842986624894284 o-- C_0004620521348394676367 : +frame_status
+C_0012297862223289303692 ..> C_0004315181692269219892
+C_0012297862223289303692 ..> C_0017124327411696956044
+C_0008692990845302086001 <|-- C_0012297862223289303692
+C_0007502489721465431826 ..> C_0004315181692269219892
+C_0007502489721465431826 ..> C_0017124327411696956044
+C_0008692990845302086001 <|-- C_0007502489721465431826
+C_0016904465258491332869 ..> C_0004315181692269219892
+C_0016904465258491332869 ..> C_0017124327411696956044
+C_0008692990845302086001 <|-- C_0016904465258491332869
+C_0001407135350663951225 ..> C_0017124327411696956044
+C_0001407135350663951225 ..> C_0014959434479756000164
+C_0001407135350663951225 ..> C_0011891657276856613663
+C_0007580346824975383624 ..> C_0017124327411696956044
+C_0007580346824975383624 ..> C_0000376715805624440450
+C_0011772050897097102088 ..> C_0000376715805624440450
+C_0011772050897097102088 o-- C_0017124327411696956044 : -ready_queue
+C_0007580346824975383624 <|-- C_0011772050897097102088
+C_0012508087039555320850 ..> C_0000376715805624440450
+C_0012508087039555320850 o-- C_0017124327411696956044 : -ready_queue
+C_0007580346824975383624 <|-- C_0012508087039555320850
+C_0004177479592842890715 o-- C_0007580346824975383624 : -scheduler
+C_0004177479592842890715 o-- C_0017124327411696956044 : -all_processes
+C_0004177479592842890715 o-- C_0017124327411696956044 : -completed_processes
+C_0004177479592842890715 --> C_0017124327411696956044 : -running_process
+C_0004177479592842890715 --> C_0017124327411696956044 : -memory_check_callback
+C_0004177479592842890715 --> C_0015686568166430605488 : -memory_manager
+C_0004177479592842890715 --> C_0008219851577123996267 : -io_manager
+C_0004177479592842890715 --> C_0010690123791750361250 : -metrics_collector
+C_0012387011832210303416 ..> C_0000376715805624440450
+C_0012387011832210303416 o-- C_0017124327411696956044 : -ready_queue
+C_0007580346824975383624 <|-- C_0012387011832210303416
+C_0006015274746488179789 --> C_0017124327411696956044 : +process
+C_0006015274746488179789 o-- C_0011891657276856613663 : +burst
+C_0005309394375849652600 ..> C_0006015274746488179789
+C_0005309394375849652600 ..> C_0000649663591845582532
+C_0002693170422180874951 ..> C_0017124327411696956044
+C_0002693170422180874951 o-- C_0005309394375849652600 : -scheduler
+C_0002693170422180874951 --> C_0006015274746488179789 : -current_request
+C_0002693170422180874951 ..> C_0017124327411696956044 : -completion_callback
+C_0002693170422180874951 --> C_0010690123791750361250 : -metrics_collector
+C_0008219851577123996267 ..> C_0017124327411696956044
+C_0008219851577123996267 ..> C_0006015274746488179789
+C_0008219851577123996267 o-- C_0002693170422180874951 : -devices
+C_0008219851577123996267 ..> C_0017124327411696956044 : -completion_callback
+C_0008219851577123996267 --> C_0010690123791750361250 : -metrics_collector
+C_0017799743282178042182 ..> C_0000376715805624440450
+C_0017799743282178042182 o-- C_0017124327411696956044 : -ready_queue
+C_0007580346824975383624 <|-- C_0017799743282178042182
+C_0011376090978946678222 ..> C_0000649663591845582532
+C_0011376090978946678222 o-- C_0006015274746488179789 : -queue
+C_0005309394375849652600 <|-- C_0011376090978946678222
+C_0015119987245978162037 ..> C_0000649663591845582532
+C_0015119987245978162037 o-- C_0006015274746488179789 : -queue
+C_0005309394375849652600 <|-- C_0015119987245978162037
+
+'Generated with clang-uml, version 0.6.2
+'LLVM version clang version 21.1.2
+@enduml

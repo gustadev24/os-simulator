@@ -1,0 +1,9 @@
+# Configuración - FCFS Convoy Effect
+total_memory_frames=32
+frame_size=4096
+scheduling_algorithm=FCFS
+page_replacement_algorithm=LRU
+io_scheduling_algorithm=FCFS
+# Los quantums son ignorados en FCFS, pero se dejan por formato
+quantum=5
+io_quantum=5
