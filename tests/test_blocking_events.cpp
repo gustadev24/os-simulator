@@ -1,3 +1,8 @@
+/**
+ * @file test_blocking_events.cpp
+ * @brief Tests para eventos de bloqueo (I/O, memoria) y transiciones de estado
+ */
+
 #include "cpu/cpu_scheduler.hpp"
 #include "cpu/fcfs_scheduler.hpp"
 #include "io/io_device.hpp"
@@ -13,6 +18,10 @@
 
 using namespace OSSimulator;
 using json = nlohmann::json;
+
+// ============================================================================
+// I/O BLOCKING TESTS
+// ============================================================================
 
 TEST_CASE("State transitions for I/O blocking are logged",
           "[metrics][blocking]") {
@@ -97,6 +106,10 @@ TEST_CASE("State transitions for I/O blocking are logged",
   REQUIRE(found_waiting_to_ready);
 }
 
+// ============================================================================
+// MEMORY BLOCKING TESTS
+// ============================================================================
+
 TEST_CASE("State transitions for memory blocking are logged",
           "[metrics][blocking]") {
   std::filesystem::create_directories("data/test/resultados");
@@ -177,6 +190,10 @@ TEST_CASE("State transitions for memory blocking are logged",
   REQUIRE(found_page_fault);
   REQUIRE(found_memory_waiting_to_ready);
 }
+
+// ============================================================================
+// QUEUE SNAPSHOT TESTS
+// ============================================================================
 
 TEST_CASE("Queue snapshots are logged after blocking events",
           "[metrics][blocking]") {
