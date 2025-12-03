@@ -1,5 +1,3 @@
-# Configuración - RR Ineficiente
-# Quantum muy bajo para bursts largos = Muchos cambios de contexto
 total_memory_frames=40
 frame_size=4096
 scheduling_algorithm=RoundRobin

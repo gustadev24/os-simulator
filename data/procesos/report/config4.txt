@@ -1,5 +1,3 @@
-# Configuración - Stress Test (Poca RAM + Procesos Complejos)
-# 16 frames es muy poco. Apenas caben 2 o 3 procesos en memoria a la vez.
 total_memory_frames=18
 frame_size=4096
 scheduling_algorithm=RoundRobin
