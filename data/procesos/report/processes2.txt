@@ -1,4 +1,3 @@
-# 20 Procesos. Bursts largos de CPU interrumpidos constantemente.
 P1 0 CPU(20) 1 4
 P2 0 CPU(18),E/S(2),CPU(10) 2 5
 P3 1 CPU(25) 3 4

@@ -1,11 +1,7 @@
-# P1 monopoliza la CPU. P2-P6 sufren inanición temporal (espera excesiva).
-# El "Monstruo"
 P1 0 CPU(60),E/S(5),CPU(40) 1 12
-# Los "Rápidos" atascados en la fila
 P2 1 CPU(2),E/S(1),CPU(2) 2 4
 P3 2 CPU(3) 3 3
 P4 3 CPU(1),E/S(1),CPU(1) 1 2
 P5 4 CPU(4) 2 4
 P6 5 CPU(2),E/S(2),CPU(2) 3 3
-# Otro proceso pesado al final para rematar
 P7 6 CPU(30),E/S(5),CPU(20) 1 10

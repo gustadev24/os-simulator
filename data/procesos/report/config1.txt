@@ -1,4 +1,3 @@
-# Configuración - Caso Base Agresivo
 total_memory_frames=32
 frame_size=4096
 scheduling_algorithm=RoundRobin

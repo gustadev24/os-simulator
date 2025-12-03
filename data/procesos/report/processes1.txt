@@ -1,4 +1,3 @@
-# 10 Procesos. Estructuras variadas. Demanda de memoria > Oferta.
 P1 0 CPU(5),E/S(3),CPU(4),E/S(2),CPU(4) 1 6
 P2 1 CPU(4),E/S(5) 2 5
 P3 2 CPU(8) 3 4

@@ -19,7 +19,6 @@
           };
           python = pkgs.python312.override {
             packageOverrides = pyfinal: pyprev: {
-              py2puml = pyfinal.callPackage ./nix-pkgs/py2puml.nix { };
             };
           };
         in
@@ -45,7 +44,6 @@
                   numpy
                   pytest
                   pandas
-                  py2puml
                   seaborn
                   plotutils
                   click
