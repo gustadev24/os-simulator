@@ -27,8 +27,9 @@ class SummaryDashboardGenerator(BaseGenerator):
         @param loader Instancia de MetricsLoader con datos cargados.
         """
         summary = loader.get_summary_metrics()
+        cpu_metrics = loader.get_cpu_metrics()
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 8))
         ax.axis("off")
 
         fig.suptitle(
@@ -44,6 +45,9 @@ class SummaryDashboardGenerator(BaseGenerator):
             ["Cambios de Contexto", str(summary["total_context_switches"])],
             ["Fallos de Página", str(summary["total_page_faults"])],
             ["Reemplazos de Página", str(summary["total_replacements"])],
+            ["Tiempo Promedio de Espera", f"{cpu_metrics['avg_waiting_time']:.2f} ticks"],
+            ["Tiempo Promedio de Retorno", f"{cpu_metrics['avg_turnaround_time']:.2f} ticks"],
+            ["Utilización de CPU", f"{cpu_metrics['cpu_utilization']:.2f}%"],
         ]
 
         table = ax.table(
