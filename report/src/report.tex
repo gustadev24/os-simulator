@@ -32,52 +32,51 @@
 
 \makeatletter
 \newcommand{\linebreakand}{%
-    \end{@IEEEauthorhalign}
-    \hfill\mbox{}\par
-    \mbox{}\hfill\begin{@IEEEauthorhalign}
+	\end{@IEEEauthorhalign}
+	\hfill\mbox{}\par
+	\mbox{}\hfill\begin{@IEEEauthorhalign}
 }
 \makeatother
 
 \title{Implementación de un Simulador de Sistema Operativo Simplificado con Planificación de CPU, E/S y Administración de Memoria}
 
 \author{\IEEEauthorblockN{1\textsuperscript{er} Alvaro Raúl Quispe Condori}
-    \IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
-        Arequipa, Perú \\
-        aquispecondo@unsa.edu.pe}
-    \and
-    \IEEEauthorblockN{2\textsuperscript{do} Christian Raul Mestas Zegarra}
-    \IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
-        Arequipa, Perú \\
-        cmestasz@unsa.edu.pe}
-    \linebreakand
-    \IEEEauthorblockN{3\textsuperscript{er} Luis Gustavo Sequeiros Condori}
-    \IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
-        Arequipa, Perú \\
-        lsequeiros@unsa.edu.pe}
-    \and
-    \IEEEauthorblockN{4\textsuperscript{to} Yenaro Joel Noa Camino}
-    \IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
-        Arequipa, Perú \\
-        ynoa@unsa.edu.pe}
+	\IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
+		Arequipa, Perú \\
+		aquispecondo@unsa.edu.pe}
+	\and
+	\IEEEauthorblockN{2\textsuperscript{do} Christian Raul Mestas Zegarra}
+	\IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
+		Arequipa, Perú \\
+		cmestasz@unsa.edu.pe}
+	\linebreakand
+	\IEEEauthorblockN{3\textsuperscript{er} Luis Gustavo Sequeiros Condori}
+	\IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
+		Arequipa, Perú \\
+		lsequeiros@unsa.edu.pe}
+	\and
+	\IEEEauthorblockN{4\textsuperscript{to} Yenaro Joel Noa Camino}
+	\IEEEauthorblockA{\textit{Universidad Nacional de San Agustín de Arequipa} \\
+		Arequipa, Perú \\
+		ynoa@unsa.edu.pe}
 }
 
 \maketitle
 
 \begin{abstract}
-    Este trabajo presenta un simulador de sistema operativo que integra planificación de unidad central de procesamiento (CPU), gestión de entrada/salida (E/S) y administración de memoria virtual mediante paginación. El sistema está implementado en C++17 con ejecución concurrente, donde cada proceso se ejecuta en un hilo independiente. Se incluyen cuatro algoritmos de planificación de CPU, cuatro algoritmos de reemplazo de páginas y dos algoritmos de planificación de E/S. Un módulo complementario en Python genera visualizaciones para el análisis del comportamiento del sistema. El diseño modular facilita la extensión de componentes y permite evaluar combinaciones de algoritmos bajo diferentes cargas de trabajo.
+
+	El presente trabajo elaboro un simulador hecho con C++ 17 de un sistema operativo que integra la unidad central de procesamiento, la gestión de entrada y salida (E/S) y la administración de memoria virtual por paginación. Así mismo, un módulo de Python realiza gráficos a partir de los registros generados por el simulador para el análisis del comportamiento del sistema. Se realizó un diseño modular para la extensión de componentes y que permita alternar entre diferentes combinaciones de algoritmos.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    planificación de procesos, memoria virtual, paginación, simulación de sistemas operativos, algoritmos de reemplazo
+	planificación de procesos, memoria virtual, paginación, simulación de sistemas operativos, algoritmos de reemplazo
 \end{IEEEkeywords}
 
 \section{Introducción}
 
-Los sistemas operativos \cite{peterson1985operating} son responsables de gestionar los recursos de hardware y proporcionar servicios a las aplicaciones que se ejecutan sobre ellos. Entre las funciones principales de un sistema operativo se encuentran la planificación de procesos para el uso del procesador, la administración de memoria para la asignación de espacio a los programas, y la coordinación de operaciones de entrada/salida (E/S) con dispositivos periféricos. La interacción entre estos tres subsistemas determina en gran medida el rendimiento del sistema.
+Los sistemas operativos \cite{peterson1985operating} son responsables de la gestión de los recursos del hardware y de proveer servicios a las aplicaciones que se ejecutan sobre él. Entre las principales funciones de un sistema operativo se pueden mencionar la planificación del uso del CPU, la gestión de memoria para la asignación de la misma a los programas y la coordinación de las operaciones de entrada y salida. La coordinación de estos tres factores determina el rendimiento del sistema en general.
 
-El desarrollo de simuladores permite estudiar el comportamiento de estos mecanismos sin requerir acceso a hardware dedicado. Un simulador puede ejecutar diferentes configuraciones de algoritmos y cargas de trabajo, facilitando la comparación de estrategias de planificación y gestión de recursos. Esta capacidad resulta valiosa tanto para fines educativos como para la investigación de nuevas políticas de administración.
-
-Este trabajo presenta un simulador que reproduce el comportamiento de los tres subsistemas mencionados. El componente de planificación de unidad central de procesamiento (CPU) implementa los algoritmos First Come First Served (FCFS), Shortest Job First (SJF), Round Robin y planificación por prioridad. El administrador de memoria utiliza paginación con algoritmos de reemplazo First In First Out (FIFO), Least Recently Used (LRU), Not Recently Used (NRU) y el algoritmo óptimo. El planificador de E/S soporta FCFS y Round Robin. Cada proceso se ejecuta en un hilo independiente, lo que replica el comportamiento concurrente de un sistema operativo.
+El presente trabajo desarrolla un simulador del comportamiento de los subsistemas mencionados anteriormente. El componente del CPU implementa el algoritmo First Come First Served (FCFS), Shortest Job First (SJF), Round Robin y la planificación por prioridad. El gestor de memoria utiliza paginación con algoritmos de reemplazo entre First In First Out (FIFO), Least Recently Used (LRU), Not Recently Used (NRU) y el algoritmo óptimo. Por último, el planificador de E/S soporta FCFS y Round Robin. Cada proceso se ejecuta en un hilo independiente para replicar la concurrencia de un sistema operativo.
 
 El documento se organiza de la siguiente manera: la Sección II presenta los conceptos teóricos fundamentales; la Sección III describe las herramientas utilizadas; la Sección IV detalla la metodología, incluyendo arquitectura, implementación y algoritmos; la Sección V muestra los resultados experimentales; y la Sección VI expone las conclusiones.
 
@@ -87,33 +86,36 @@ Esta sección presenta los conceptos teóricos necesarios para comprender el fun
 
 \subsection{Sistemas operativos y procesos}
 
-Un sistema operativo es el software que actúa como intermediario entre el usuario y el hardware de la computadora \cite{peterson1985operating}. Sus funciones principales incluyen la gestión de recursos, la provisión de una interfaz de usuario y la ejecución de programas de aplicación.
+Un sistema operativo es el intermediario entre usuario y hardware que permite la ejecución de otros programas \cite{peterson1985operating}. Se encarga de la planificación de recursos, la gestión de una interfaz de usuario y la ejecución de los procesos de aplicaciones.
 
-Un proceso es un programa en ejecución que incluye el código del programa, su actividad actual representada por el contador de programa, el contenido de los registros del procesador, y una sección de datos con variables globales \cite{peterson1985operating}. Los procesos atraviesan diferentes estados durante su ciclo de vida: nuevo, listo, en ejecución, en espera y terminado.
+Por su parte, un proceso es un programa que incluye el código del programa, su actividad en el contador de programa, registros en el procesador y una sección con datos de variables globales \cite{peterson1985operating}.
 
-\subsection{Planificación de CPU}
 
-La planificación de CPU \cite{stallings2004sistemas} es el mecanismo mediante el cual el sistema operativo decide qué proceso utilizará el procesador en cada momento. Los algoritmos de planificación se clasifican en apropiativos, que permiten interrumpir un proceso en ejecución, y no apropiativos, que permiten que un proceso se ejecute hasta que termine o se bloquee voluntariamente.
+
+\subsection{Planificación de CPU y algoritmos de planificación}
+
+Es el mecanismo mediante el cual el sistema operativo decide qué proceso utilizará el procesador en algún momento dado \cite{stallings2004sistemas}.
+Los algoritmos de planificación se clasifican en apropiativos, que permiten interrumpir un proceso en ejecución, y no apropiativos, que permiten que un proceso se ejecute hasta que termine o se bloquee voluntariamente.
 
 El algoritmo FCFS \cite{peterson1985operating} atiende los procesos en el orden en que llegan a la cola de listos. SJF \cite{stallings2004sistemas} selecciona el proceso con la ráfaga de CPU más corta. Round Robin \cite{tanenbaum2015modern} asigna un intervalo de tiempo fijo llamado quantum \cite{tanenbaum2015modern} a cada proceso de forma cíclica. La planificación por prioridad \cite{stallings2004sistemas} asigna el procesador al proceso con mayor prioridad.
 
 \subsection{Memoria virtual y paginación}
 
-La memoria virtual \cite{peterson1985operating} es una técnica que permite ejecutar procesos cuyo tamaño excede la memoria física disponible. El sistema mantiene en memoria principal solo las porciones del proceso que se están utilizando, mientras el resto permanece en almacenamiento secundario.
+La memoria virtual \cite{peterson1985operating} permite ejecutar procesos que superan la memoria física. El sistema mantiene en memoria solo las partes del proceso que se están usando, mientras el resto permanece en almacenamiento secundario.
 
-La paginación \cite{tanenbaum2015modern} divide el espacio de direcciones lógicas en bloques de tamaño fijo llamados páginas, que se mapean a bloques físicos denominados marcos. Cuando un proceso accede a una página que no está en memoria, ocurre un fallo de página \cite{peterson1985operating}, y el sistema debe cargarla desde el almacenamiento secundario.
+Por su parte, la paginación \cite{tanenbaum2015modern} divide el espacio de direcciones en páginas de tamaño fijo que se mapean a marcos en memoria física. Cuando un proceso accede a una página que no está cargada, ocurre un fallo de página \cite{peterson1985operating} y el sistema debe traerla desde el almacenamiento secundario.
 
-Los algoritmos de reemplazo determinan qué página desalojar cuando la memoria está llena. FIFO \cite{tanenbaum2015modern} reemplaza la página más antigua. LRU \cite{peterson1985operating} reemplaza la página que no ha sido utilizada durante más tiempo. NRU \cite{tanenbaum2015modern} clasifica las páginas según sus bits de referencia y modificación. El algoritmo óptimo \cite{peterson1985operating} reemplaza la página que no se usará por más tiempo en el futuro.
+Los algoritmos de reemplazo deciden qué página retirar cuando la memoria está llena. FIFO \cite{tanenbaum2015modern} reemplaza la página más antigua. LRU \cite{peterson1985operating} retira la página que lleva más tiempo sin usarse. NRU \cite{tanenbaum2015modern} clasifica las páginas según sus bits de referencia y modificación. El algoritmo óptimo \cite{peterson1985operating} elige la página que no se usará durante más tiempo en el futuro.
 
 \subsection{Gestión de entrada/salida}
 
-La gestión de E/S \cite{stallings2004sistemas} coordina las operaciones de acceso a dispositivos periféricos. Las operaciones de E/S son considerablemente más lentas que las operaciones de CPU, por lo que los procesos se bloquean mientras esperan la finalización de estas operaciones. Los algoritmos de planificación de E/S determinan el orden en que se atienden las solicitudes pendientes.
+La gestión de E/S \cite{stallings2004sistemas} coordina el acceso a los dispositivos periféricos. Las operaciones de E/S son mucho más lentas que las del CPU, así que los procesos se bloquean mientras esperan su finalización. Los algoritmos de planificación de E/S determinan el orden en que se atienden las solicitudes pendientes.
 
 \subsection{Concurrencia y sincronización}
 
-La concurrencia \cite{stallings2004sistemas} permite que múltiples procesos o hilos progresen simultáneamente. Cuando varios hilos acceden a recursos compartidos, se requieren mecanismos de sincronización para mantener la consistencia de los datos.
+La concurrencia \cite{stallings2004sistemas} permite que varios procesos o hilos avancen al mismo tiempo. Cuando comparten recursos, se necesitan mecanismos de sincronización para mantener la consistencia de los datos.
 
-Un mutex \cite{tanenbaum2015modern} es un mecanismo de exclusión mutua que permite que solo un hilo acceda a una sección de código a la vez. Las variables de condición \cite{peterson1985operating} permiten que los hilos esperen hasta que se cumpla una condición específica. La inanición \cite{stallings2004sistemas} es una situación en la que un proceso nunca obtiene los recursos que necesita para continuar su ejecución.
+Un mutex \cite{tanenbaum2015modern} garantiza exclusión mutua, haciendo que solo un hilo entre a una sección crítica. Las variables de condición \cite{peterson1985operating} permiten que un hilo espere hasta que se cumpla una condición específica. La inanición \cite{stallings2004sistemas} ocurre cuando un proceso nunca obtiene los recursos necesarios para continuar.
 
 \section{Herramientas utilizadas}
 
@@ -136,10 +138,10 @@ LaTeX \cite{latex} es un sistema de composición tipográfica orientado a la cre
 PlantUML \cite{plantuml} es una herramienta que permite crear diagramas UML a partir de descripciones textuales. En conjunto con clang-uml \cite{clanguml}, que genera automáticamente diagramas de clases desde código C++, se utilizaron para documentar la arquitectura del simulador y del visualizador mediante diagramas de clases.
 
 \begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.8\textwidth]{uml_simulator.png}
-    \caption{Diagrama UML de las clases del simulador.}
-    \label{fig:class_sim}
+	\centering
+	\includegraphics[width=0.8\textwidth]{uml_simulator.png}
+	\caption{Diagrama UML de las clases del simulador.}
+	\label{fig:class_sim}
 \end{figure*}
 
 \section{Metodología}
@@ -148,7 +150,7 @@ Esta sección describe el diseño del simulador, los detalles de implementación
 
 \subsection{Arquitectura del sistema}
 
-El sistema se compone de dos módulos principales: un simulador desarrollado en C++17 \cite{cppreference} y un visualizador implementado en Python \cite{python}. El simulador ejecuta la lógica del sistema operativo, mientras que el visualizador procesa los datos generados para producir gráficos que facilitan el análisis del comportamiento.
+El sistema se compone de dos módulos principales: un simulador desarrollado en C++17 \cite{cppreference} y un visualizador implementado en Python \cite{python}. El primero ejecuta la lógica del sistema operativo, mientras que el segundo procesa los datos generados para producir gráficos que facilitan el análisis del comportamiento.
 
 El simulador se subdivide en cinco componentes. El módulo Core contiene las clases fundamentales que representan procesos y ráfagas de ejecución. El módulo CPU implementa el planificador central y los algoritmos de selección de procesos. El módulo IO gestiona los dispositivos de E/S y sus planificadores. El módulo Memory administra los marcos físicos y los algoritmos de reemplazo de páginas. El módulo Metrics recopila eventos durante la simulación para su posterior análisis. La figura \ref{fig:class_sim} muestra la estructura de clases del simulador.
 
@@ -156,10 +158,10 @@ El simulador se subdivide en cinco componentes. El módulo Core contiene las cla
 El visualizador procesa archivos en formato JavaScript Object Notation Lines (JSONL) \cite{jsonl} generados por el simulador. Cada generador especializado produce un tipo de gráfico: diagramas de Gantt \cite{gantt} para CPU y E/S, evolución temporal de las colas de procesos, uso de memoria, estado de las tablas de páginas, asignación de marcos físicos, cambios de contexto y distribución de estados. La figura \ref{fig:class_vis} muestra la estructura de clases del visualizador.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.45\textwidth]{uml_visualizer.png}
-    \caption{Diagrama UML de las clases del visualizador.}
-    \label{fig:class_vis}
+	\centering
+	\includegraphics[width=0.45\textwidth]{uml_visualizer.png}
+	\caption{Diagrama UML de las clases del visualizador.}
+	\label{fig:class_vis}
 \end{figure}
 
 \subsection{Modelo de procesos}
@@ -170,15 +172,15 @@ Cuando un proceso llega al sistema, se encuentra en estado nuevo. El planificado
 
 \subsection{Flujo de ejecución}
 
-El simulador avanza mediante un reloj virtual discreto. En cada unidad de tiempo, denominada tick, se ejecuta una secuencia de operaciones coordinadas. Primero se verifican las llegadas de nuevos procesos según los tiempos definidos en el archivo de entrada. Luego el planificador de CPU selecciona el siguiente proceso a ejecutar de acuerdo con el algoritmo configurado. Si el proceso seleccionado requiere páginas que no están en memoria, se encola una solicitud de carga y el proceso se bloquea.
+El simulador avanza mediante un reloj virtual donde cada  unidad de tiempo se define como tick, donde se ejecuta una secuencia de operaciones coordinadas. Primero se verifican las llegadas de nuevos procesos según los tiempos definidos en el archivo de entrada. Luego el planificador de CPU selecciona el siguiente proceso a ejecutar de acuerdo con el algoritmo configurado. Si el proceso seleccionado requiere páginas que no están en memoria, se encola una solicitud de carga y el proceso se bloquea.
 
 El administrador de memoria resuelve un fallo de página por tick. Cuando todas las páginas de un proceso están cargadas, este puede continuar su ejecución. Durante la ejecución, el proceso consume una unidad de tiempo de su ráfaga actual. Si completa una ráfaga de CPU y la siguiente es de E/S, se envía una solicitud al planificador de E/S y el proceso se bloquea. El planificador de E/S atiende las solicitudes según su algoritmo configurado. Al completar una operación de E/S, el proceso regresa a la cola de listos. La Figura \ref{fig:flujo} ilustra este proceso.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.45\textwidth]{step_diagram.png}
-    \caption{Flujo de ejecución de un tick en el simulador, mostrando la interacción entre los módulos de CPU, memoria y E/S.}
-    \label{fig:flujo}
+	\centering
+	\includegraphics[width=0.45\textwidth]{step_diagram.png}
+	\caption{Flujo de ejecución de un tick en el simulador, mostrando la interacción entre los módulos de CPU, memoria y E/S.}
+	\label{fig:flujo}
 \end{figure}
 
 \subsection{Sincronización concurrente}
@@ -202,19 +204,19 @@ El simulador implementa cuatro algoritmos de planificación de CPU \cite{stallin
 Round Robin \cite{tanenbaum2015modern} asigna a cada proceso un intervalo de tiempo fijo denominado quantum \cite{tanenbaum2015modern}. Cuando un proceso agota su quantum sin completar su ráfaga, es preemptado y reinsertado al final de la cola de listos. El planificador por prioridad \cite{stallings2004sistemas} selecciona el proceso con mayor prioridad, representada por el menor valor numérico. Este algoritmo es apropiativo: si llega un proceso con mayor prioridad que el actual, se produce una preempción. El Cuadro \ref{tab:cpu_algorithms} resume las características de cada algoritmo.
 
 \begin{table}[hbtp]
-    \centering
-    \caption{Algoritmos de planificación de CPU implementados.}
-    \label{tab:cpu_algorithms}
-    \begin{tabular}{lcc}
-        \toprule
-        Algoritmo     & Criterio de selección & Apropiativo \\
-        \midrule
-        FCFS          & Orden de llegada      & No          \\
-        SJF           & Menor ráfaga          & No          \\
-        Round Robin   & Turno con quantum     & Sí          \\
-        Por prioridad & Mayor prioridad       & Sí          \\
-        \bottomrule
-    \end{tabular}
+	\centering
+	\caption{Algoritmos de planificación de CPU implementados.}
+	\label{tab:cpu_algorithms}
+	\begin{tabular}{lcc}
+		\toprule
+		Algoritmo     & Criterio de selección & Apropiativo \\
+		\midrule
+		FCFS          & Orden de llegada      & No          \\
+		SJF           & Menor ráfaga          & No          \\
+		Round Robin   & Turno con quantum     & Sí          \\
+		Por prioridad & Mayor prioridad       & Sí          \\
+		\bottomrule
+	\end{tabular}
 \end{table}
 
 \subsection{Algoritmos de reemplazo de páginas}
@@ -226,19 +228,19 @@ NRU \cite{tanenbaum2015modern} clasifica las páginas según sus bits de referen
 El algoritmo óptimo \cite{peterson1985operating} tradicionalmente selecciona la página que no será accedida durante más tiempo en el futuro. En sistemas reales, esta información no está disponible. En el simulador desarrollado, aunque se conoce la secuencia futura de ráfagas, no se simulan accesos individuales a páginas de memoria, ya que los requerimientos establecen que un proceso necesita todas sus páginas cargadas para ejecutarse. Por lo tanto, el algoritmo óptimo no puede evaluar accesos futuros a páginas específicas. La implementación utiliza una heurística que aproxima este comportamiento: primero considera como víctimas las páginas de procesos terminados, luego las de procesos bloqueados por E/S ordenados por tiempo restante de mayor a menor, y finalmente cualquier página que no esté protegida. El Cuadro \ref{tab:replacement_algorithms} resume los algoritmos implementados.
 
 \begin{table}[hbtp]
-    \centering
-    \caption{Algoritmos de reemplazo de páginas implementados.}
-    \label{tab:replacement_algorithms}
-    \begin{tabular}{lp{5.5cm}}
-        \toprule
-        Algoritmo & Criterio de selección                              \\
-        \midrule
-        FIFO      & Página con mayor tiempo en memoria                 \\
-        LRU       & Página no accedida por más tiempo                  \\
-        NRU       & Página con menor categoría según bit de referencia \\
-        Óptimo    & Heurística basada en estado de procesos            \\
-        \bottomrule
-    \end{tabular}
+	\centering
+	\caption{Algoritmos de reemplazo de páginas implementados.}
+	\label{tab:replacement_algorithms}
+	\begin{tabular}{lp{5.5cm}}
+		\toprule
+		Algoritmo & Criterio de selección                              \\
+		\midrule
+		FIFO      & Página con mayor tiempo en memoria                 \\
+		LRU       & Página no accedida por más tiempo                  \\
+		NRU       & Página con menor categoría según bit de referencia \\
+		Óptimo    & Heurística basada en estado de procesos            \\
+		\bottomrule
+	\end{tabular}
 \end{table}
 
 \subsection{Planificación de E/S}
@@ -256,24 +258,24 @@ El módulo de métricas registra eventos durante toda la simulación. Los evento
 El visualizador en Python lee estos archivos y genera gráficos mediante la biblioteca Seaborn \cite{seaborn}. Los diagramas de Gantt, como los mostrados en las Figuras \ref{fig:gantt_cpu} y \ref{fig:gantt_io}, presentan la asignación temporal de CPU y dispositivos de E/S a los procesos. Los gráficos de evolución de colas, como el ilustrado en la Figura \ref{fig:colas}, muestran cómo cambia la cantidad de procesos en cada estado a lo largo del tiempo.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.45\textwidth]{sample_gantt_cpu.png}
-    \caption{Ejemplo de diagrama de Gantt generado por el visualizador, mostrando la asignación de CPU.}
-    \label{fig:gantt_cpu}
+	\centering
+	\includegraphics[width=0.45\textwidth]{sample_gantt_cpu.png}
+	\caption{Ejemplo de diagrama de Gantt generado por el visualizador, mostrando la asignación de CPU.}
+	\label{fig:gantt_cpu}
 \end{figure}
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.45\textwidth]{sample_gantt_io.png}
-    \caption{Ejemplo de diagrama de Gantt generado por el visualizador, mostrando la asignación de IO.}
-    \label{fig:gantt_io}
+	\centering
+	\includegraphics[width=0.45\textwidth]{sample_gantt_io.png}
+	\caption{Ejemplo de diagrama de Gantt generado por el visualizador, mostrando la asignación de IO.}
+	\label{fig:gantt_io}
 \end{figure}
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.45\textwidth]{sample_queue_ev.png}
-    \caption{Ejemplo de gráfico de evolución de colas, mostrando la cantidad de procesos en cada estado a lo largo del tiempo.}
-    \label{fig:colas}
+	\centering
+	\includegraphics[width=0.45\textwidth]{sample_queue_ev.png}
+	\caption{Ejemplo de gráfico de evolución de colas, mostrando la cantidad de procesos en cada estado a lo largo del tiempo.}
+	\label{fig:colas}
 \end{figure}
 
 \subsection{Configuración del sistema}
@@ -318,10 +320,10 @@ El primer caso representa una carga de trabajo de referencia con 10 procesos que
 La Figura \ref{fig:gantt1} muestra la ejecución de este escenario. Se observa una distribución equitativa del tiempo de CPU entre los procesos gracias al algoritmo Round Robin. Los períodos de bloqueo por E/S son visibles como interrupciones en la ejecución de cada proceso. El sistema maneja adecuadamente la presión de memoria, utilizando LRU para seleccionar las páginas víctima de manera eficiente. Este caso sirve como línea base para comparar con los escenarios problemáticos siguientes.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.48\textwidth]{gantt1.png}
-    \caption{Diagrama de Gantt del caso base mostrando la ejecución de 10 procesos con carga moderada.}
-    \label{fig:gantt1}
+	\centering
+	\includegraphics[width=0.48\textwidth]{gantt1.png}
+	\caption{Diagrama de Gantt del caso base mostrando la ejecución de 10 procesos con carga moderada.}
+	\label{fig:gantt1}
 \end{figure}
 
 \subsection{Caso 2: Round Robin ineficiente con ráfagas largas}
@@ -331,10 +333,10 @@ Este caso demuestra una configuración inadecuada del algoritmo Round Robin. Se 
 La Figura \ref{fig:gantt2} ilustra el problema de esta configuración. El diagrama muestra una alta frecuencia de cambios de contexto: cada proceso es interrumpido constantemente antes de completar su trabajo. Por ejemplo, el proceso P5 con una ráfaga de 30 unidades requiere 15 preempciones para completarse. Esta fragmentación incrementa significativamente la sobrecarga del sistema y prolonga el tiempo de finalización de todos los procesos. El caso demuestra que la elección del quantum debe considerar la naturaleza de las ráfagas: un quantum muy pequeño para procesos con ráfagas largas resulta en una pérdida considerable de eficiencia.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.48\textwidth]{gantt2.png}
-    \caption{Diagrama de Gantt del caso Round Robin ineficiente, mostrando la fragmentación excesiva causada por un quantum inadecuado.}
-    \label{fig:gantt2}
+	\centering
+	\includegraphics[width=0.48\textwidth]{gantt2.png}
+	\caption{Diagrama de Gantt del caso Round Robin ineficiente, mostrando la fragmentación excesiva causada por un quantum inadecuado.}
+	\label{fig:gantt2}
 \end{figure}
 
 \subsection{Caso 3: Inanición severa con FCFS}
@@ -344,10 +346,10 @@ El tercer caso expone el problema del efecto convoy en el algoritmo FCFS. Un pro
 La Figura \ref{fig:gantt3} presenta la ejecución de este escenario. Los procesos P2 a P6, que podrían completarse en pocos ticks, deben esperar 60 unidades mientras P1 monopoliza el procesador. A pesar de tener ráfagas combinadas de solo 14 unidades, estos procesos experimentan tiempos de espera desproporcionados. El proceso P7 agrava la situación al añadir otra ráfaga larga después de los procesos cortos. Este caso ilustra por qué FCFS no es apropiado para sistemas interactivos o cargas mixtas: los procesos cortos sufren inanición temporal severa cuando quedan atrapados detrás de procesos largos.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.48\textwidth]{gantt3.png}
-    \caption{Diagrama de Gantt del caso FCFS mostrando inanición severa de procesos cortos.}
-    \label{fig:gantt3}
+	\centering
+	\includegraphics[width=0.48\textwidth]{gantt3.png}
+	\caption{Diagrama de Gantt del caso FCFS mostrando inanición severa de procesos cortos.}
+	\label{fig:gantt3}
 \end{figure}
 
 \subsection{Caso 4: Estrés de memoria y thrashing}
@@ -357,10 +359,10 @@ El cuarto caso evalúa el comportamiento del sistema bajo presión extrema de me
 La Figura \ref{fig:gantt4} muestra los resultados de este escenario. El diagrama de Gantt presenta períodos frecuentes de espera por memoria entre las ejecuciones, ya que los procesos deben recargar sus páginas constantemente. El patrón de múltiples transiciones CPU-E/S amplifica el problema: cada vez que un proceso vuelve de una operación de E/S, es probable que sus páginas hayan sido reemplazadas por otros procesos.
 
 \begin{figure}[hbtp]
-    \centering
-    \includegraphics[width=0.48\textwidth]{gantt4.png}
-    \caption{Diagrama de Gantt del caso de estrés de memoria mostrando el impacto de los frecuentes fallos de página.}
-    \label{fig:gantt4}
+	\centering
+	\includegraphics[width=0.48\textwidth]{gantt4.png}
+	\caption{Diagrama de Gantt del caso de estrés de memoria mostrando el impacto de los frecuentes fallos de página.}
+	\label{fig:gantt4}
 \end{figure}
 
 Es importante notar que reducir la memoria a 16 marcos en este escenario provoca un colapso del sistema por thrashing extremo. La cantidad de eventos de fallo de página generados crece extramadamente rápido, ya que cada proceso desaloja las páginas de los demás en un ciclo continuo. En las pruebas realizadas, esta configuración generó tal volumen de eventos que la memoria del sistema ejecutándolo (8GB) se saturó antes de completar la ejecución, demostrando cómo el thrashing puede llevar a un sistema a la inoperabilidad total.
