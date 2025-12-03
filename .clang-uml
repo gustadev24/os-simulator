@@ -1,0 +1,14 @@
+compilation_database_dir: build
+output_directory: .
+diagrams:
+  uml_simulator:
+    type: class
+    glob:
+      - src/**/*.cpp
+    using_namespace: OSSimulator
+    include:
+      namespaces:
+        - OSSimulator
+    plantuml:
+      before:
+        - left to right direction

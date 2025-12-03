@@ -1,0 +1,201 @@
+@startuml
+left to right direction
+
+' ============= Data Loading =============
+class "MetricsLoader" as MetricsLoader {
++MetricsLoader(metrics_file: str) : void
+..
++load() : void
+-_extract_processes() : void
++get_max_tick() : int
++get_state_transitions() : Dict[str, List[Dict[str, Any]]]
++get_queue_data() : Dict[str, List[Any]]
++get_memory_data() : Dict[str, List[Any]]
++get_page_tables() : Dict[str, Dict[str, Any]]
++get_final_frame_status() : List[Dict[str, Any]]
++get_context_switches() : List[Dict[str, Any]]
++get_io_operations() : List[Dict[str, Any]]
++get_io_device_events() : List[Dict[str, Any]]
++get_summary_metrics() : Dict[str, Any]
+__
+-_metrics_file : str
+-_metrics : List[Dict[str, Any]]
+-_processes : List[str]
+__
+<<property>> +metrics : List[Dict[str, Any]]
+<<property>> +processes : List[str]
+}
+
+' ============= Base Generator =============
+abstract "BaseGenerator" as BaseGenerator {
++BaseGenerator(output_dir: Path) : void
+..
+-_setup_style() : void
+{abstract} +generate(loader: MetricsLoader) : void
++get_process_color(process_name: str) : str
++get_state_color(state: str) : str
++sort_process_names(names: List[str]) : List[str]
++configure_axis_ticks(ax: Axes, x_data: List, y_data: List, integer_x: bool, integer_y: bool) : void
++style_axis(ax: Axes, xlabel: str, ylabel: str, title: str, grid: bool, grid_axis: str) : void
++save_figure(filename: str) : void
+__
+-_output_dir : Path
+__
+{static} +STATE_COLORS : Dict[str, str]
+{static} +PROCESS_COLORS : Dict[str, str]
+{static} +EXTENDED_COLORS : List[str]
+{static} +CHART_COLORS : Dict[str, str]
+{static} +TABLE_COLORS : Dict[str, str]
+{static} +FONT_SIZES : Dict[str, int]
+{static} +STYLE : Dict[str, Any]
+}
+
+' ============= Concrete Generators =============
+class "GanttChartGenerator" as GanttChartGenerator {
++GanttChartGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+-_get_state_style() : Dict[str, Dict[str, Any]]
+__
+}
+
+class "QueueEvolutionGenerator" as QueueEvolutionGenerator {
++QueueEvolutionGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "MemoryUsageGenerator" as MemoryUsageGenerator {
++MemoryUsageGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "PageTableGenerator" as PageTableGenerator {
++PageTableGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "FrameAllocationGenerator" as FrameAllocationGenerator {
++FrameAllocationGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "IOOperationsGenerator" as IOOperationsGenerator {
++IOOperationsGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+-_match_io_periods(io_operations: List[Dict[str, Any]]) : Dict[str, List[Dict[str, Any]]]
+-_draw_io_timeline(ax: Axes, io_periods: Dict[str, List[Dict[str, Any]]]) : void
+-_draw_io_queue_size(ax: Axes, loader: MetricsLoader) : void
+-_set_common_xrange(ax1: Axes, ax2: Axes, io_periods: Dict, loader: MetricsLoader) : void
+__
+}
+
+class "IOGanttChartGenerator" as IOGanttChartGenerator {
++IOGanttChartGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+-_match_io_periods(io_operations: List[Dict[str, Any]]) : Dict[str, List[Dict[str, Any]]]
+-_extract_active_service_ticks(io_device_events: List[Dict[str, Any]]) : Dict[str, Set[int]]
+-_split_into_segments(proc_name: str, start: int, end: int, active_ticks: Dict[str, Set[int]]) : List[Tuple[int, int, bool]]
+__
+}
+
+class "ContextSwitchesGenerator" as ContextSwitchesGenerator {
++ContextSwitchesGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "SummaryDashboardGenerator" as SummaryDashboardGenerator {
++SummaryDashboardGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "StateDistributionGenerator" as StateDistributionGenerator {
++StateDistributionGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+class "StateTimelineGenerator" as StateTimelineGenerator {
++StateTimelineGenerator(output_dir: Path) : void
+..
++generate(loader: MetricsLoader) : void
+__
+}
+
+' ============= Orchestrators =============
+class "MetricsVisualizer" as MetricsVisualizer {
++MetricsVisualizer(metrics_file: str, output_dir: str) : void
+..
+-_setup_output_dir() : void
+-_create_generators() : void
++generate_all() : void
+__
+-_metrics_file : str
+-_output_dir : Path
+-_loader : MetricsLoader
+-_generators : List[BaseGenerator]
+}
+
+class "BatchProcessor" as BatchProcessor {
++BatchProcessor(input_dir: str, output_dir: str) : void
+..
++find_metrics_files(recursive: bool) : List[Path]
++process_file(metrics_file: Path, output_subdir: str) : bool
++process_all(recursive: bool) : void
+__
+-_input_dir : Path
+-_output_dir : Path
+-_processed_files : List[str]
+-_failed_files : List[str]
+__
+<<property>> +processed_files : List[str]
+<<property>> +failed_files : List[str]
+}
+
+' ============= Inheritance Relationships =============
+BaseGenerator <|-- GanttChartGenerator
+BaseGenerator <|-- QueueEvolutionGenerator
+BaseGenerator <|-- MemoryUsageGenerator
+BaseGenerator <|-- PageTableGenerator
+BaseGenerator <|-- FrameAllocationGenerator
+BaseGenerator <|-- IOOperationsGenerator
+BaseGenerator <|-- IOGanttChartGenerator
+BaseGenerator <|-- ContextSwitchesGenerator
+BaseGenerator <|-- SummaryDashboardGenerator
+BaseGenerator <|-- StateDistributionGenerator
+BaseGenerator <|-- StateTimelineGenerator
+
+' ============= Composition/Aggregation =============
+MetricsVisualizer o-- MetricsLoader : -_loader
+MetricsVisualizer o-- BaseGenerator : -_generators
+
+' ============= Dependencies =============
+BaseGenerator ..> MetricsLoader : <<uses>>
+BatchProcessor ..> MetricsVisualizer : <<creates>>
+GanttChartGenerator ..> MetricsLoader
+QueueEvolutionGenerator ..> MetricsLoader
+MemoryUsageGenerator ..> MetricsLoader
+PageTableGenerator ..> MetricsLoader
+FrameAllocationGenerator ..> MetricsLoader
+IOOperationsGenerator ..> MetricsLoader
+IOGanttChartGenerator ..> MetricsLoader
+ContextSwitchesGenerator ..> MetricsLoader
+SummaryDashboardGenerator ..> MetricsLoader
+StateDistributionGenerator ..> MetricsLoader
+StateTimelineGenerator ..> MetricsLoader
+
+@enduml

@@ -1,6 +1,0 @@
-P1 0 CPU(4),E/S(2),CPU(4) 1 8
-P2 1 CPU(3),E/S(3),CPU(3) 2 8
-P3 2 CPU(5),E/S(2),CPU(2) 3 8
-P4 5 CPU(4),E/S(2),CPU(4) 1 8
-P5 6 CPU(3),E/S(1),CPU(5) 2 8
-P6 8 CPU(6),E/S(2),CPU(2) 3 8

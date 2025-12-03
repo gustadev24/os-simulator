@@ -68,6 +68,16 @@ El simulador desarrollado busca simular el comportamiento de un sistema operativ
 | Linux             | `sudo apt install doxygen` (Debian/Ubuntu)                         |
 | macOS             | `brew install doxygen`                                             |
 
+#### PlantUML y clang-uml (para diagramas UML)
+
+| Sistema Operativo | Instalación                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Windows           | Descargar desde [plantuml.com](https://plantuml.com/download), clang-uml desde GitHub releases |
+| Linux             | `sudo apt install plantuml` (Debian/Ubuntu), clang-uml compilar desde fuente                   |
+| macOS             | `brew install plantuml`, clang-uml compilar desde fuente                                        |
+
+> **Nota**: clang-uml se usa para generar automáticamente el diagrama UML del simulador C++ desde el código fuente. PlantUML renderiza los archivos `.puml` a imágenes.
+
 #### LaTeX (para documentación en PDF)
 
 | Sistema Operativo | Instalación                                                                           |
