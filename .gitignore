@@ -1,7 +1,8 @@
 .direnv
 build
 .cache
-docs
+docs/html
+docs/latex
 test*.jsonl
 data/resultados/
 data/diagramas/
