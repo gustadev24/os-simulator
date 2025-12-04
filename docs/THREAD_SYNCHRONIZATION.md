@@ -31,6 +31,8 @@ std::atomic<bool> step_complete;                 // Indica si el paso de ejecuci
 | `should_terminate` | Señal atómica para solicitar la terminación del hilo |
 | `step_complete` | Indica atómicamente que el paso de ejecución terminó |
 
+> **Nota sobre ordenamiento de memoria**: Las variables atómicas en C++ utilizan por defecto `std::memory_order_seq_cst` (secuencialmente consistente), que es el modo más seguro y garantiza un orden total de operaciones. En este simulador, se usa este ordenamiento por defecto para simplificar el razonamiento sobre la concurrencia.
+
 ### 2.2 Planificador de CPU (`CPUScheduler`)
 
 El planificador de CPU coordina la ejecución de todos los procesos:
