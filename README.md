@@ -11,6 +11,7 @@ El simulador desarrollado busca simular el comportamiento de un sistema operativ
 - **Gestión de E/S**: Simulación de dispositivos de entrada/salida con planificación FCFS y Round Robin
 - **Recolección de métricas**: Generación de archivos JSONL con datos de ejecución
 - **Visualización**: Generación de diagramas y gráficos (modo individual y por lotes)
+- **Sincronización de hilos**: Ejecución concurrente de procesos con mecanismos de sincronización (ver [documentación detallada](docs/THREAD_SYNCHRONIZATION.md))
 
 ---
 
